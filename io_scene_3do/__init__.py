@@ -235,32 +235,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         box_log.prop(self, 'f_log_lv_')
 
 
-class Export3D(bpy.types.Operator, ExportHelper, OrientationHelper):
-    """ **experimental** """
-    bl_idname = 'export_scene.papyrus_3d'
-    bl_label = 'Export 3D'
-    # bl_options = {'UNDO'}
-    # filename_ext = '.3d'
-    # filter_glob = StringProperty(default='*.3d', options={'HIDDEN'})
-    # scale = Export3DO.scale
-    # alt_color = Export3DO.alt_color
-    # tex_flag_ = Export3DO.tex_flag_
-    # tex_flag = Export3DO.tex_flag
-    # tex_from = Export3DO.tex_from
-    # flip_uv = Export3DO.flip_uv
-    # apply_modifiers = Export3DO.apply_modifiers
-    # f15_rot_space = Export3DO.f15_rot_space
-    # export_all = Export3DO.export_all
-    # c_log_lv_ = Export3DO.c_log_lv_
-    # c_log_lv = Export3DO.c_log_lv
-    # f_log_lv_ = Export3DO.f_log_lv_
-    # f_log_lv = Export3DO.f_log_lv
-    #
-    # execute = Export3DO.execute
-    # draw = Export3DO.draw
-    pass
-
-
 # handler
 def import_3do_menu_handler(self, context):
     self.layout.operator(Import3DO.bl_idname,
@@ -270,8 +244,6 @@ def import_3do_menu_handler(self, context):
 def export_3do_menu_handler(self, context):
     self.layout.operator(Export3DO.bl_idname,
                          text='Papyrus ICR2 (.3do)')
-    # self.layout.operator(Export3D.bl_idname,
-    #                      text='N3tools 3D (.3d)')
 
 
 def register():

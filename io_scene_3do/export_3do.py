@@ -1,5 +1,4 @@
 # coding: utf-8
-import warnings
 from itertools import chain
 from logging import getLogger
 from math import degrees
@@ -714,96 +713,6 @@ class ModelExporter:
         """
         return self._model.optimized().get_bytes()
 
-    def _build_3d_lines(self):
-        """
-        for 3d23do
-
-        .. note::
-
-            * F16 works as LIST
-            * F04 GROUP is always 31
-
-        :rtype: __generator[str]
-        """
-        warnings.warn('', PendingDeprecationWarning)
-        jn = ', '.join
-        sr = '{{{}}}'.format
-        types = {1: 'POLY', 2: 'POLY', 4: 'MATERIAL', 5: 'FACE', 6: 'FACE2',
-                 7: 'BSPF', 8: 'BSPA', 9: 'BSP2', 10: 'BSPN', 11: 'LIST',
-                 12: 'DYNO', 13: 'SWITCH', 15: 'DYNAMIC', 16: 'LIST'}
-        opt_map = self._model.body.get_optimization_map()
-        files = self._model.header.files
-        yield '3D VERSION 3.0'
-        for offset, flavor in sorted(self._flavors.items()):
-            if offset in opt_map:
-                continue
-            name = '{}{}'.format(
-                'v' if isinstance(flavor, VertexFlavor) else 'f', offset)
-            elems = ['{}:'.format(name), types.get(flavor.type)]
-            if isinstance(flavor, RefFlavor):  # 01, 02, 04...11, 13, 16
-                prefix = 'v' if isinstance(flavor, FaceFlavor) else 'f'
-                children = jn('{}{}'.format(prefix, opt_map.get(o, o))
-                              for o in flavor.children)
-                if isinstance(flavor, FaceFlavor):  # 01, 02
-                    if flavor.type == 2:
-                        elems.append('[T]')
-                    elems.append('<{}> {}'.format(flavor.color, sr(children)))
-                elif isinstance(flavor, F04):  # 04
-                    mip_name = files['mip'][flavor.mip_index]
-                    elems.append(
-                        'GROUP = 31, MIP = "{}", {}'.format(mip_name, children))
-                elif isinstance(flavor, BspFlavor):  # 05...10
-                    ref_pts = [opt_map.get(o, o) for o in
-                               self._bsp_ref_map.get(offset, [])]
-                    if ref_pts:
-                        elems.append('(v{}, v{}, v{}),'.format(*ref_pts))
-                        elems.append(children)
-                    else:  # insert(1, msg); works as list
-                        elems[1:1] = ['LIST {};'.format(sr(children)),
-                                      '% no bsp ref: replaced from']
-                elif isinstance(flavor, F11):
-                    elems.append('{}'.format(sr(children)))
-                elif isinstance(flavor, F13):
-                    origin = flavor.values1.i[0]
-                    elems.append('DISTANCE (v{}) >'.format(
-                        opt_map.get(origin, origin)))
-                    pairs = zip(flavor.distances, flavor.children)
-                    values = ('({} ? f{})'.format(d, opt_map.get(o, o))
-                              for d, o in pairs)
-                    elems.append('{}'.format(sr(jn(values))))
-                elif isinstance(flavor, F16):
-                    next_offset = self._flavors[flavor.next_offset].offset
-                    elem = sr('f{}, {}'.format(
-                        opt_map.get(next_offset, next_offset), children))
-                    elems.append('{}; % F16'.format(sr(elem)))
-                else:
-                    raise NotImplementedError(flavor, elems)
-            else:  # 00, 03, 12, 15
-                if isinstance(flavor, VertexFlavor):
-                    if flavor.vtype:
-                        vtx = ['<{}, {}, {}>'.format(*flavor.co)]
-                        if flavor.vtype == 2:
-                            vtx.append('t=<{}, {}>'.format(*flavor.uv))
-                        elems.append('[{}]'.format(jn(vtx)))
-                    else:
-                        elems.append('NIL')
-                elif isinstance(flavor, F12):
-                    elems.append(sr(jn(map(str, flavor.values1.i))))
-                elif isinstance(flavor, F15):
-                    values = list(flavor.values1.i[:6])  # type: list
-                    values.append(1)
-                    tso_name = files['3do'][flavor.object_index]
-                    values.append('EXTERN "{}"'.format(tso_name))
-                    elems.append(jn(map(str, values)))
-                else:  # 14, 17, 18
-                    raise NotImplementedError(flavor)
-            line = ' '.join(filter(None, elems))
-            yield '{};'.format(line)
-
-    def get_3d(self):
-        warnings.warn('', PendingDeprecationWarning)
-        return '\n'.join(self._build_3d_lines())
-
     @property
     def _flavors(self):
         return self._model.body.flavors
@@ -839,9 +748,7 @@ def save(operator, context, filepath, apply_modifiers=False, matrix=None,
                              **kwargs)
     exporter.build_model()
     path = Path(filepath)
-    suffix = path.suffix
-    data = (exporter.get_3do() if suffix.lower() == '.3do' else
-            exporter.get_3d().encode())
+    data = exporter.get_3do()
     with path.open('wb') as f:
         f.write(data)
     return {'FINISHED'}
