@@ -10,17 +10,27 @@ import mathutils
 from .icr2model import __version__ as icr2model_ver
 
 print(icr2model_ver)
-if tuple(map(int, icr2model_ver.split('.'))) < (0, 2, 0):
+_ver = icr2model_ver.split('.')
+_min = int(_ver[1])
+if _min <= 1:
     from .icr2model.model import Model
     from .icr2model.model.flavor import build_flavor
     from .icr2model.model.flavor.flavor import *
     from .icr2model.model.flavor.values import BspValues
     from .icr2model.model.flavor.values.unit import to_papy_degree
-else:
+elif _min == 2:
     from .icr2model import Model
     from .icr2model.flavor import *
     from .icr2model.flavor.values import BspValues
     from .icr2model.flavor.values.unit import to_papy_degree
+elif _min == 3:
+    from .icr2model.flavor import build_flavor
+    from .icr2model.flavor.flavor import *
+    from .icr2model.flavor.value.unit import to_papy_degree
+    from .icr2model.flavor.value.values import BspValues
+    from .icr2model.model import Model
+else:
+    raise Exception('Invalid icr2model package version ({)'.format(icr2model_ver))
 
 logger = getLogger(__name__)
 
@@ -437,7 +447,7 @@ class ModelExporter:
         """
         offset = len(self._flavors)
         assert self._flavors.get(offset) is None
-        flavor = build_flavor(offset, type_, values1=values1, values2=values2)
+        flavor = build_flavor(offset=offset, type_=type_, values1=values1, values2=values2)
         self._flavors[offset] = flavor
         if isinstance(flavor, RefFlavor):
             assert all(self._flavors.get(x) for x in flavor.children)
