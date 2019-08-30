@@ -443,7 +443,7 @@ class ModelImporter:
 
     def read_model(self):
         self._model.read()
-        if self._model.is_track:  # for lod
+        if self._model.is_track():  # for lod
             for f17 in self._flavors.by_types(17).values():  # type: F17
                 self._lod_mgrs[f17.parents[0]] = list(f17.values1)
         tex_ref = {}  # {F02 offset: F04 offset} -> ...
@@ -498,7 +498,7 @@ class ModelImporter:
         :param bpy.types.Context context:
         """
         # scale
-        scale = (scale or (1000000 if self._model.is_track else 10000))
+        scale = (scale or (1000000 if self._model.is_track() else 10000))
         scale_vec = mathutils.Vector([1, 1, 1]) / scale
         root_obj = self._objects[self._model.header.root_offset]
         root_obj.scale = scale_vec
