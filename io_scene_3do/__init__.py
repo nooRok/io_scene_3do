@@ -1,7 +1,7 @@
 # coding: utf-8
 bl_info = {'name': 'Papyrus ICR2 3DO format',
            'author': 'nooRok/BobLogSan',
-           'version': (0, 3, 0),
+           'version': (0, 3, 1),
            'blender': (2, 74, 0),
            'location': 'File > Import-Export',
            'description': 'Import/Export 3DO file',
