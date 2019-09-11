@@ -63,19 +63,19 @@ def get_vertex_group_map(obj, mesh):
 
     :param bpy.types.Object obj:
     :param bpy.types.Mesh mesh:
-    :return: {vertex group name: [face index in vertex group, ...], ...}
+    :return: {vertex group name: [face index, ...], ...}
     :rtype: dict[str, list[int]]
     """
-    v_grps = [set(vg_elem.group for vg_elem in v.groups)
-              for v in mesh.vertices]  # [[vtx grp idx a vtx is member of (int), ...], ...]
-    v_grp_map = {}
+    vg_idcs = [[vg.group for vg in v.groups] for v in mesh.vertices]
+    # key: vtx_idx, val: [vg_idx(int), ...]
+    pairs = [(vg.name, []) for vg in obj.vertex_groups]
+    # key: vg_idx val: [vg_name(str), [f_idx(int), ...]]
     for f in mesh.polygons:  # type: bpy.types.MeshPolygon
-        fv_grps = (v_grps[v_idx] for v_idx in f.vertices)  # [[頂点に設定されたvtx grp, ...], ...]
-        v_grp_idc = set.intersection(*fv_grps)  # 面の持つ全ての頂点が含まれる(=面を構成できる) vtx grp
-        for v_grp_idx in v_grp_idc:
-            v_grp = obj.vertex_groups[v_grp_idx]  # type: bpy.types.VertexGroup
-            v_grp_map.setdefault(v_grp.name, []).append(f.index)
-    return v_grp_map
+        f_vg_idcs = (vg_idcs[vi] for vi in f.vertices)
+        for vg_idx in set.intersection(*map(set, f_vg_idcs)):
+            # index of vertex group that contains all of vertices of the face
+            pairs[vg_idx][1].append(f.index)
+    return dict(pairs)  # {k: v for k, v in pairs if v}
 
 
 def get_children(obj, key=None):
