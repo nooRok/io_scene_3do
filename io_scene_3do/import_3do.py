@@ -411,7 +411,7 @@ class ModelImporter:
                         group = get_group(filename)
                         set_dupli_group(obj, group)
                     else:  # pmp 18
-                        pass
+                        raise NotImplementedError('F18')
 
     def _create_merged_object(self):
         """
