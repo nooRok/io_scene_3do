@@ -116,17 +116,6 @@ def get_group(name):
             bpy.data.groups.new(name))
 
 
-def set_dupli_group(obj, group, type_='GROUP'):
-    """
-
-    :param bpy.types.Object obj:
-    :param bpy.types.Group group:
-    :param str type_:
-    """
-    obj.dupli_group = group
-    obj.dupli_type = type_
-
-
 def get_material(material_id):
     """
     Find non-zero-filled -> zero-filled -> new non-zero-filled
