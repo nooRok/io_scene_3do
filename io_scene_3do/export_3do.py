@@ -236,19 +236,11 @@ def get_uv_layer(mesh, face_index, from_material=False):
     :param bool from_material:
     :rtype: bpy.types.MeshUVLoopLayer
     """
-    if from_material:
-        mtl = get_face_material(mesh, face_index)
-        if mtl:
-            t_slot = get_texture_slot(mtl)
-            if t_slot:
-                assert t_slot.texture_coords == 'UV'
-                assert t_slot.texture.type == 'IMAGE'
-                uvm_name = t_slot.uv_layer
-                if uvm_name:
-                    return mesh.uv_layers[uvm_name]
-                return get_uv_layer(mesh, face_index, False)
-    else:
-        return mesh.uv_layers.active
+    mtl = get_face_material(mesh, face_index)
+    t_slot = get_texture_slot(mtl)
+    if t_slot:
+        assert t_slot.uv_layer  # str
+        return mesh.uv_layers[t_slot.uv_layer]
 
 
 def gen_face_uv_vertices(mesh, face_index, from_material=False):
