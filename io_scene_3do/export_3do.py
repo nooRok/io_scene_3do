@@ -1,4 +1,5 @@
 # coding: utf-8
+from itertools import zip_longest
 from logging import getLogger
 from math import degrees
 from random import randrange
@@ -462,11 +463,10 @@ class ModelExporter:
         img = get_face_texture_image(mesh, face_index, use_mtl)
         face_vtc = [self._get_scaled_vertex(vtx, self._get_matrix(obj))
                     for vtx in gen_face_vertices(mesh, face_index)]
-        uv_vtc = ([get_pixel_coordinate(vtx, img.size, self._flip_uv)
-                   for vtx in gen_face_uv_vertices(mesh, face_index, use_mtl)] or
-                  [None for _ in range(len(face_vtc))])
+        uv_vtc = [get_pixel_coordinate(vtx, img.size, self._flip_uv)
+                  for vtx in gen_face_uv_vertices(mesh, face_index, use_mtl)]
         vf_os = [self._store_vertex_flavor(vtx, uv)
-                 for vtx, uv in zip(face_vtc, uv_vtc)]
+                 for vtx, uv in zip_longest(face_vtc, uv_vtc)]
         mtl = get_face_material(mesh, face_index)
         color_idx = get_color_index(mtl.name if mtl else '', self._alt_color)
         values1 = [color_idx, len(vf_os) - 1]
