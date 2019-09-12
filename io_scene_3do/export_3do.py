@@ -124,7 +124,7 @@ def get_color_index(material_name, alt_color_index=None):
             return randrange(25, 176)
         elif alt_color_index is not None:
             return get_color_index(alt_color_index)
-        raise ValueError('color index is out of range (-2...255): {}'.format(index))
+        raise ValueError('Color index must be between -2 and 255: {}'.format(index))
     except Exception:
         raise
 
@@ -355,7 +355,8 @@ class ModelExporter:
             mesh = (self._meshes.get(obj) or
                     self._meshes.setdefault(
                         obj, obj.to_mesh(bpy.context.scene, True, 'RENDER')))
-            logger.info('{} {}'.format(obj, mesh))
+            logger.info('mod Ob(%s): [Me(%s) -> Me(%s)]',
+                        obj.name, obj.data.name, mesh.name)
             return mesh
         return obj.data
 
@@ -369,9 +370,10 @@ class ModelExporter:
         mesh = self._get_mesh(obj)
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
-            logger.info('%s %s', obj, ref_obj)
             v_grp_map = get_vertex_group_map(ref_obj, mesh)
             v_grp_name = get_reference_keys(obj, self._sep)[1]
+            logger.info('grp Ob(%s): [Ob(%s).Gr(%s): Me(%s)]',
+                        obj.name, ref_obj.name, v_grp_name, mesh.name)
             try:
                 return [mesh.polygons[i] for i in v_grp_map[v_grp_name]]
             except KeyError:
@@ -580,7 +582,7 @@ class ModelExporter:
             elif not (v1 or v2):
                 values2 = self._get_child_offsets(obj)
             else:  # v1 or v2
-                msg = 'Pair of non-empty and empty values are not allowed'
+                msg = 'v1 and v2 must be pair of valid values or pair of empties.'
                 raise ValueError(msg, v1[:], v2[:])
             values1 = [values2.pop(0), len(values2)]
             self._store_flavor(type_, values1, values2, obj)
@@ -638,7 +640,7 @@ class ModelExporter:
         :param bool ignore_property:
         :return:
         """
-        logger.debug(obj)
+        logger.debug('Object("%s")', obj.name)
         ref_keys = get_reference_keys(obj, self._sep)
         if ref_keys and not ref_keys[1]:  # ref w/o vertex group
             ref_obj = self._get_reference_object(obj, recursive=False)  # process one obj at a time
@@ -678,10 +680,10 @@ class ModelExporter:
             logger.exception('')
             raise
         finally:
-            logger.info(self._offsets)
-            logger.info(self._meshes)
+            logger.debug(self._offsets)
+            logger.debug(self._meshes)
             for mesh in self._meshes.values():
-                logger.info('%s', mesh)
+                logger.info('rem %s', mesh)
                 bpy.data.meshes.remove(mesh)
             self._meshes.clear()
             _Cache.clear()
