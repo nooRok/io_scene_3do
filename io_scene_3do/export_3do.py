@@ -214,18 +214,10 @@ def get_face_texture_image(mesh, face_index, from_material=False):
     :return:
     :rtype: bpy.types.Image
     """
-    if from_material:
-        mtl = get_face_material(mesh, face_index)
-        if mtl:
-            t_slot = get_texture_slot(mtl)
-            if t_slot and t_slot.texture.type == 'IMAGE':
-                return t_slot.texture.image
-    else:
-        uvt = mesh.uv_textures.active
-        if uvt:
-            img = uvt.data[face_index].image
-            assert img
-            return img
+    mtl = get_face_material(mesh, face_index)
+    t_slot = get_texture_slot(mtl)
+    if t_slot:
+        return t_slot.texture.image
 
 
 def get_uv_layer(mesh, face_index, from_material=False):
