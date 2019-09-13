@@ -197,7 +197,12 @@ def get_texture_slot(material):
     :rtype: bpy.types.MaterialTextureSlot
     """
     slots = (s for s in material.texture_slots if s and s.use)
-    return next(slots, None)
+    slot = next(slots, None)
+    if slot:
+        assert isinstance(slot, bpy.types.MaterialTextureSlot)
+        assert slot.texture_coords == 'UV'
+        assert slot.texture.type == 'IMAGE'
+    return slot
 
 
 def get_face_texture_image(mesh, face_index, from_material=False):
