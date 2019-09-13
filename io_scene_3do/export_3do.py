@@ -279,13 +279,12 @@ def has_area(o, a, b, ndigits=None):
 
 class ModelExporter:
     def __init__(self, apply_modifiers, separator,
-                 texture_from, texture_flag, flip_uv, alt_color,
+                 texture_flag, flip_uv, alt_color,
                  matrix, f15_rot_space, *args, **kwargs):
         """
 
         :param bool apply_modifiers:
         :param str separator:
-        :param str texture_from: 'active'|'material'
         :param int texture_flag:
             Texture flag for F02 without texture flag value (1|2|4|...|64)
         :param bool flip_uv:
@@ -723,7 +722,7 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :return:
     """
     exporter = ModelExporter(apply_modifiers, separator,
-                             texture_from, default_texture_flag, flip_uv, alt_color,
+                             default_texture_flag, flip_uv, alt_color,
                              matrix, f15_rot_space, **kwargs)
     if exporter.build_model(obj or context.active_object):
         with open(filepath, 'wb') as f:
