@@ -165,9 +165,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                                  name='F15 Matrix',
                                  description='Matrix space for F15 object rotation',
                                  default='basis')
-    apply_global_mx_f15 = BoolProperty(name='Apply Global Matrix',
-                                       description='Apply global orientation to F15 objects',
-                                       default=False)
     #
     export_all = BoolProperty(name='Export All Selected Objects',
                               description='Object name is used as filename. '
@@ -244,7 +241,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         box_f15_mx = layout.box()
         box_f15_mx.label('F15 Matrix:')
         box_f15_mx.prop(self, 'f15_rot_space')
-        box_f15_mx.prop(self, 'apply_global_mx_f15')
         box_mtl = layout.box()
         box_mtl.prop(self, 'alt_color')
         box_mtl.prop(self, 'tex_flag_')
