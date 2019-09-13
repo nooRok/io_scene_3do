@@ -183,7 +183,7 @@ def set_uv_coordinates(uv_loops, vertex_uvs, size):
         uv_loop.uv = l_uv
 
 
-class ModelImporter:
+class Importer:
     def __init__(self, filepath, *args, **kwargs):
         self.filepath = filepath
         self._sep = ''
@@ -533,7 +533,7 @@ def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
     :param str separator:
     :return:
     """
-    importer = ModelImporter(filepath)
+    importer = Importer(filepath)
     importer.read_model()
     importer.register_textures(tex_h, tex_w)
     importer.register_materials()
