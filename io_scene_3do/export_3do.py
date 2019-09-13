@@ -41,6 +41,7 @@ class _Cache:
         return self.cache.setdefault(key, self.f(*args, **kwargs))
 
 
+@_Cache
 def get_reference_keys(obj, separator):
     """
 
