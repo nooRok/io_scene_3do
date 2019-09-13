@@ -144,11 +144,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                              default='8',
                              update=lambda s, c: setattr(s, 'tex_flag', int(s.tex_flag_)))
     tex_flag = IntProperty(default=8, options={'HIDDEN'})
-    tex_from = EnumProperty(items=[('material', 'Material', ''),
-                                   ('active', 'Active UV Map', '')],
-                            name='Texture Image From',
-                            description='Texture image from',
-                            default='material')
     flip_uv = BoolProperty(name='Flip UV',
                            description='Flip UV vertically',
                            default=True)
@@ -204,7 +199,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         with self:
             try:
                 kw = self.as_keywords()
-                kw['texture_from'] = kw.pop('tex_from')
                 kw['default_texture_flag'] = kw.pop('tex_flag')
                 rot_mx = axis_conversion(to_forward=self.axis_forward,
                                          to_up=self.axis_up).to_4x4()
@@ -244,7 +238,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         box_mtl = layout.box()
         box_mtl.prop(self, 'alt_color')
         box_mtl.prop(self, 'tex_flag_')
-        box_mtl.prop(self, 'tex_from')
         box_mtl.prop(self, 'flip_uv')
         box = layout.box()
         box.prop(self, 'apply_modifiers')
