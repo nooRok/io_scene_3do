@@ -62,19 +62,22 @@ class Import3DO(bpy.types.Operator, ImportHelper):
     bl_options = {'UNDO'}
     filename_ext = '.3do'
     filter_glob = StringProperty(default='*.3do', options={'HIDDEN'})
+    #
     scale = IntProperty(name='Scale',
                         description='3do model scale (1:n) '
                                     '0=auto '
                                     '(object=1:10000 / track=1:1000000)',
                         default=0)
-    # grp = BoolProperty(name='Group data tree', default=True)
+    # trk LOD
     lod_hi = BoolProperty(name='HI', default=True)
     lod_mid = BoolProperty(name='MID', default=True)
     lod_lo = BoolProperty(name='LO', default=True)
+    # default MIP size
     tex_w = IntProperty(name='Mip Width', default=256,
                         description='Default texture width')
     tex_h = IntProperty(name='Mip Height', default=256,
                         description='Default texture height')
+    # merge
     merge_faces = BoolProperty(name='Merge Faces', default=True)
     merge_uv_maps = BoolProperty(name='Merge UV Maps', default=False)
     merged_obj_name = StringProperty(name='Name', default='',
@@ -108,9 +111,9 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         box_mrg = layout.box()
         box_mrg.label('Merge options:')
         box_mrg.prop(self, 'merge_faces')
-        box_mrg.prop(self, 'merge_uv_maps')
         box_mrg.prop(self, 'merged_obj_name')
         box_mrg.prop(self, 'separator')
+        box_mrg.prop(self, 'merge_uv_maps')
 
 
 class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
