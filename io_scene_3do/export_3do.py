@@ -703,7 +703,7 @@ class ModelExporter:
 
 
 def save(operator, context, filepath, apply_modifiers, separator,
-         texture_from, default_texture_flag, flip_uv, alt_color,
+         default_texture_flag, flip_uv, alt_color,
          matrix, f15_rot_space, obj=None, **kwargs):
     """
 
@@ -712,7 +712,6 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :param str filepath:
     :param bool apply_modifiers:
     :param str separator:
-    :param str texture_from: 'active'|'material'
     :param int default_texture_flag: 1|2|4|...|64
     :param bool flip_uv:
     :param int alt_color: -2(random 0-255)|-1(random 32-175)|0-255
