@@ -445,7 +445,7 @@ class ModelExporter:
         :return: Vertex flavor offset
         :rtype: int
         """
-        offset = self._store_flavor(0, map(round, vtx), map(int, uv or []))
+        offset = self._store_flavor(0, map(int, vtx), map(int, uv or []))
         self._flavors[offset].vtype = 2 if uv else 1
         return offset
 
