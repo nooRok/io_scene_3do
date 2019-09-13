@@ -195,7 +195,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         handlers = [h for h in logger.handlers
-                    if type(h) != StreamHandler]
+                    if isinstance(h, FileHandler)]
         for h in handlers:
             h.close()
             logger.removeHandler(h)
