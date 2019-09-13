@@ -34,10 +34,11 @@ class _Cache:
         for i in cls._instances:  # type: _Cache
             i.cache.clear()
 
-    def __call__(self, obj, *args, **kwargs):
-        if obj in self.cache:
-            return self.cache[obj]
-        return self.cache.setdefault(obj, self.f(obj, *args, **kwargs))
+    def __call__(self, *args, **kwargs):
+        key = args + tuple(kwargs.items())
+        if key in self.cache:
+            return self.cache[key]
+        return self.cache.setdefault(key, self.f(*args, **kwargs))
 
 
 def get_reference_keys(obj, separator):
