@@ -300,7 +300,6 @@ class ModelExporter:
         self._apply_modifiers = apply_modifiers
         self._sep = separator
         # material
-        self._tex_from = texture_from
         self._tex_flag = texture_flag
         self._flip_uv = flip_uv
         self._alt_color = alt_color
