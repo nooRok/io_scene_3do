@@ -171,7 +171,7 @@ def get_texture_slot(material):
 
     :param bpy.types.Material material:
     :return: first enabled texture slot
-    :rtype: bpy.types.MaterialTextureSlot|bpy.types.TextureSlot
+    :rtype: bpy.types.MaterialTextureSlot
     """
     slots = (s for s in material.texture_slots if s and s.use)
     return next(slots, None)
@@ -281,7 +281,7 @@ class ModelExporter:
         self._flip_uv = flip_uv
         self._alt_color = alt_color
         # matrix
-        self._matrix = matrix.to_4x4() or mathutils.Matrix()  # 4x4
+        self._matrix = matrix.to_4x4()
         self._f15_rot_space = f15_rot_space
         # maps
         self._files = {'mip': {}, 'pmp': {}, '3do': {}}
@@ -316,7 +316,7 @@ class ModelExporter:
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
             ref_mx = self._get_matrix(ref_obj, space)
-            mx.translation = mx.to_translation() - ref_mx.to_translation()
+            mx.translation = (mx - ref_mx).to_translation()
         return mx
 
     def _get_file_index(self, key, filename):
@@ -328,8 +328,7 @@ class ModelExporter:
         :rtype: int
         """
         files = self._files[key]
-        idx = files.setdefault(filename, len(files))
-        return idx
+        return files.setdefault(filename, len(files))
 
     def _get_child_offsets(self, obj, order=None):
         """
@@ -391,9 +390,7 @@ class ModelExporter:
         :return:
         :rtype: mathutils.Vector
         """
-        if matrix:
-            return self._matrix * matrix * vertex
-        return self._matrix * vertex
+        return self._matrix * (matrix or mathutils.Matrix()) * vertex
 
     def _gen_bsp_values(self, obj):
         """
@@ -643,12 +640,11 @@ class ModelExporter:
         """
         logger.debug(obj)
         ref_keys = get_reference_keys(obj, self._sep)
-        if ref_keys and not ref_keys[1]:  # Avoid to convert merged model
-            ref_obj = self._get_reference_object(obj, recursive=False)
-            assert ref_obj
+        if ref_keys and not ref_keys[1]:  # ref w/o vertex group
+            ref_obj = self._get_reference_object(obj, recursive=False)  # process one obj at a time
             self._build_flavor(ref_obj, ignore_property)
             self._offsets[obj] = self._offsets[ref_obj]
-            return
+            return  # avoid to convert obj (the referrer)
         if obj in self._offsets:
             return
         for c_obj in get_children(obj):
