@@ -614,10 +614,7 @@ class ModelExporter:
                         idx = self._get_file_index('3do', get_filename(obj))
                         values1[-1] = ~idx
                 else:  # if not values1:  # or some_flag
-                    mul = (a * b for a, b in zip(obj.matrix_world.translation,
-                                                 self._matrix.to_scale()))
-                    tr_vec = mathutils.Vector(mul)
-                    tr_vec.rotate(self._matrix)
+                    tr_vec = self._matrix * obj.matrix_world.translation
                     loc = [int(v) for v in tr_vec]
                     eul = self._get_matrix(obj, self._f15_rot_space).to_euler()
                     eul.y *= -1  # y- front and y+ back in blender
