@@ -59,6 +59,26 @@ def get_reference_keys(obj, separator):
 
 
 @_Cache
+def get_reference_object(obj, separator, recursive=True):
+    """
+
+    :param bpy.types.Object obj:
+    :param str separator:
+    :param bool recursive:
+    :return:
+    :rtype: bpy.types.Object
+    :raise: Exception (RecursionError)
+    """
+    ref_keys = get_reference_keys(obj, separator)
+    if ref_keys:
+        ref_obj = bpy.data.objects[ref_keys[0]]
+        if recursive:
+            return get_reference_object(ref_obj, separator) or ref_obj
+        return ref_obj
+    return None
+
+
+@_Cache
 def get_vertex_group_map(obj, mesh):
     """
 
@@ -295,17 +315,12 @@ class ModelExporter:
         """
 
         :param bpy.types.Object obj:
+        :param bool recursive:
         :return:
         :rtype: bpy.types.Object
         :raise: Exception (RecursionError)
         """
-        ref_keys = get_reference_keys(obj, self._sep)
-        if ref_keys:
-            ref_obj = bpy.data.objects[ref_keys[0]]
-            if recursive:
-                return self._get_reference_object(ref_obj) or ref_obj
-            return ref_obj
-        return None
+        return get_reference_object(obj, self._sep, recursive)
 
     def _get_matrix(self, obj, space='world'):
         """
