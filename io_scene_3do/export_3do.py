@@ -276,6 +276,21 @@ def get_pixel_coordinate(uv_vertex, image_size, flip_uv=False):
     return None
 
 
+def has_area(o, a, b, ndigits=None):
+    """
+
+    :param mathutils.Vector o: origin
+    :param mathutils.Vector a: point a
+    :param mathutils.Vector b: point b
+    :param int ndigits:
+    :return:
+    :rtype: bool
+    """
+    v1 = (a - o).normalized()
+    v2 = (b - o).normalized()
+    return abs(round(v1.dot(v2), ndigits=ndigits)) < 1.0
+
+
 class ModelExporter:
     def __init__(self, apply_modifiers, separator,
                  texture_from, texture_flag, flip_uv, alt_color,
@@ -419,14 +434,11 @@ class ModelExporter:
         """
         mesh = self._get_mesh(obj)
         for f in self._get_faces(obj):
-            pts = [self._get_scaled_vertex(vtx, self._get_matrix(obj))
-                   for vtx in gen_face_vertices(mesh, f.index)]
-            pts_grps = (pts[i:i + 3] for i in range(len(pts) - 2))
-            vecs = ((a, b, c) for a, b, c in pts_grps
-                    if round(a.angle(b - a) - a.angle(c - a), 4))
-            bsp_pts = next(vecs)  # drop invalid normal values
-            bv = BspValues.from_coordinates(*bsp_pts)
-            yield bv
+            vtc = [self._get_scaled_vertex(v, self._get_matrix(obj))
+                   for v in gen_face_vertices(mesh, f.index)]
+            points = zip(vtc, vtc[1:], vtc[2:])  # [[0,1,2], [1,2,3]...]
+            coords = next(pts for pts in points if has_area(*pts, ndigits=4))
+            yield BspValues.from_coordinates(*coords)
 
     def _store_flavor(self, type_, values1=None, values2=None, obj=None):
         """
