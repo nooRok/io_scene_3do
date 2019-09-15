@@ -403,15 +403,15 @@ class ModelExporter:
         mesh = self._get_mesh(obj)
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
-            v_grp_map = get_vertex_group_map(ref_obj, mesh)
-            v_grp_name = get_reference_keys(obj, self._sep)[1]
+            groups = get_vertex_group_map(ref_obj, mesh)
+            name = get_reference_keys(obj, self._sep)[1]
             logger.info('grp Ob(%s): [Ob(%s).Gr(%s): Me(%s)]',
-                        obj.name, ref_obj.name, v_grp_name, mesh.name)
+                        obj.name, ref_obj.name, name, mesh.name)
             try:
-                return [mesh.polygons[i] for i in v_grp_map[v_grp_name]]
+                return [mesh.polygons[i] for i in groups[name]]
             except KeyError:
                 msg = "'{}{}{}' referred from '{}'".format(
-                    ref_obj.name, self._sep, v_grp_name, obj.name)
+                    ref_obj.name, self._sep, name, obj.name)
                 raise KeyError(msg)
         if mesh:
             return mesh.polygons
