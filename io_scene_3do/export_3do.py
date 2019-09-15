@@ -475,12 +475,11 @@ class ModelExporter:
         :rtype: int
         """
         mesh = self._get_mesh(obj)
-        use_mtl = self._tex_from == 'material'
-        img = get_face_texture_image(mesh, face_index, use_mtl)
+        img = get_face_texture_image(mesh, face_index)
         face_vtc = [self._get_scaled_vertex(vtx, self._get_matrix(obj))
                     for vtx in gen_face_vertices(mesh, face_index)]
         uv_vtc = [get_pixel_coordinate(vtx, img.size, self._flip_uv)
-                  for vtx in gen_face_uv_vertices(mesh, face_index, use_mtl)]
+                  for vtx in gen_face_uv_vertices(mesh, face_index)]
         vf_os = [self._store_vertex_flavor(vtx, uv)
                  for vtx, uv in zip_longest(face_vtc, uv_vtc)]
         mtl = get_face_material(mesh, face_index)
