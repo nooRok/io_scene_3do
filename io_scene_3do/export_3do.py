@@ -205,12 +205,11 @@ def get_texture_slot(material):
     return slot
 
 
-def get_face_texture_image(mesh, face_index, from_material=False):
+def get_face_texture_image(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     :return:
     :rtype: bpy.types.Image
     """
@@ -220,12 +219,11 @@ def get_face_texture_image(mesh, face_index, from_material=False):
         return t_slot.texture.image
 
 
-def get_uv_layer(mesh, face_index, from_material=False):
+def get_uv_layer(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     :rtype: bpy.types.MeshUVLoopLayer
     """
     mtl = get_face_material(mesh, face_index)
@@ -235,15 +233,14 @@ def get_uv_layer(mesh, face_index, from_material=False):
         return mesh.uv_layers[t_slot.uv_layer]
 
 
-def gen_face_uv_vertices(mesh, face_index, from_material=False):
+def gen_face_uv_vertices(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     """
     face = mesh.polygons[face_index]
-    uv_layer = get_uv_layer(mesh, face_index, from_material)
+    uv_layer = get_uv_layer(mesh, face_index)
     if uv_layer:
         for i in face.loop_indices:  # type: int
             yield uv_layer.data[i].uv.copy()
