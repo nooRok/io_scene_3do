@@ -354,12 +354,12 @@ class ModelExporter:
         if ref_obj:
             return self._get_mesh(ref_obj)
         if self._apply_modifiers and obj.modifiers:
-            mesh = (self._meshes.get(obj) or
-                    self._meshes.setdefault(
-                        obj, obj.to_mesh(bpy.context.scene, True, 'RENDER')))
+            if obj in self._meshes:
+                return self._meshes[obj]
+            mesh = obj.to_mesh(bpy.context.scene, True, 'RENDER')
             logger.info('mod Ob(%s): [Me(%s) -> Me(%s)]',
                         obj.name, obj.data.name, mesh.name)
-            return mesh
+            return self._meshes.setdefault(obj, mesh)
         return obj.data
 
     def _get_faces(self, obj):
