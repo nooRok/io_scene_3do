@@ -481,7 +481,7 @@ class ModelImporter:
         self._lod_lv = lod_level
         self._read_flavor(self._model.header.root_offset)
 
-    def link_objects(self, context=None, scale=0):
+    def link_objects(self, context, scale=0):
         """
         Link objects to current scene
 
@@ -499,13 +499,13 @@ class ModelImporter:
         # link
         grp = get_group(os.path.basename(self.filepath))
         for obj in (list(self._objects.values()) + self._dummies):
-            (context or bpy.context).scene.objects.link(obj)
+            context.scene.objects.link(obj)
             grp.objects.link(obj)
         if self._merged_obj_name:
             mrg_obj = self._create_merged_object()
             mrg_obj['ref_source'] = True
             mrg_obj.scale = scale_vec
-            (context or bpy.context).scene.objects.link(mrg_obj)
+            context.scene.objects.link(mrg_obj)
 
     @property
     def merge_uv_maps(self):
