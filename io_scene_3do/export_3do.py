@@ -205,61 +205,42 @@ def get_texture_slot(material):
     return slot
 
 
-def get_face_texture_image(mesh, face_index, from_material=False):
+def get_face_texture_image(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     :return:
     :rtype: bpy.types.Image
     """
-    if from_material:
-        mtl = get_face_material(mesh, face_index)
-        if mtl:
-            t_slot = get_texture_slot(mtl)
-            if t_slot and t_slot.texture.type == 'IMAGE':
-                return t_slot.texture.image
-    else:
-        uvt = mesh.uv_textures.active
-        if uvt:
-            img = uvt.data[face_index].image
-            assert img
-            return img
+    mtl = get_face_material(mesh, face_index)
+    t_slot = get_texture_slot(mtl)
+    if t_slot:
+        return t_slot.texture.image
 
 
-def get_uv_layer(mesh, face_index, from_material=False):
+def get_uv_layer(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     :rtype: bpy.types.MeshUVLoopLayer
     """
-    if from_material:
-        mtl = get_face_material(mesh, face_index)
-        if mtl:
-            t_slot = get_texture_slot(mtl)
-            if t_slot:
-                assert t_slot.texture_coords == 'UV'
-                assert t_slot.texture.type == 'IMAGE'
-                uvm_name = t_slot.uv_layer
-                if uvm_name:
-                    return mesh.uv_layers[uvm_name]
-                return get_uv_layer(mesh, face_index, False)
-    else:
-        return mesh.uv_layers.active
+    mtl = get_face_material(mesh, face_index)
+    t_slot = get_texture_slot(mtl)
+    if t_slot:
+        assert t_slot.uv_layer  # str
+        return mesh.uv_layers[t_slot.uv_layer]
 
 
-def gen_face_uv_vertices(mesh, face_index, from_material=False):
+def gen_face_uv_vertices(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     """
     face = mesh.polygons[face_index]
-    uv_layer = get_uv_layer(mesh, face_index, from_material)
+    uv_layer = get_uv_layer(mesh, face_index)
     if uv_layer:
         for i in face.loop_indices:  # type: int
             yield uv_layer.data[i].uv.copy()
@@ -298,13 +279,12 @@ def has_area(o, a, b, ndigits=None):
 
 class ModelExporter:
     def __init__(self, apply_modifiers, separator,
-                 texture_from, texture_flag, flip_uv, alt_color,
+                 texture_flag, flip_uv, alt_color,
                  matrix, f15_rot_space, *args, **kwargs):
         """
 
         :param bool apply_modifiers:
         :param str separator:
-        :param str texture_from: 'active'|'material'
         :param int texture_flag:
             Texture flag for F02 without texture flag value (1|2|4|...|64)
         :param bool flip_uv:
@@ -319,7 +299,6 @@ class ModelExporter:
         self._apply_modifiers = apply_modifiers
         self._sep = separator
         # material
-        self._tex_from = texture_from
         self._tex_flag = texture_flag
         self._flip_uv = flip_uv
         self._alt_color = alt_color
@@ -491,12 +470,11 @@ class ModelExporter:
         :rtype: int
         """
         mesh = self._get_mesh(obj)
-        use_mtl = self._tex_from == 'material'
-        img = get_face_texture_image(mesh, face_index, use_mtl)
+        img = get_face_texture_image(mesh, face_index)
         face_vtc = [self._get_scaled_vertex(vtx, self._get_matrix(obj))
                     for vtx in gen_face_vertices(mesh, face_index)]
         uv_vtc = [get_pixel_coordinate(vtx, img.size, self._flip_uv)
-                  for vtx in gen_face_uv_vertices(mesh, face_index, use_mtl)]
+                  for vtx in gen_face_uv_vertices(mesh, face_index)]
         vf_os = [self._store_vertex_flavor(vtx, uv)
                  for vtx, uv in zip_longest(face_vtc, uv_vtc)]
         mtl = get_face_material(mesh, face_index)
@@ -725,7 +703,7 @@ class ModelExporter:
 
 
 def save(operator, context, filepath, apply_modifiers, separator,
-         texture_from, default_texture_flag, flip_uv, alt_color,
+         default_texture_flag, flip_uv, alt_color,
          matrix, f15_rot_space, obj=None, **kwargs):
     """
 
@@ -734,7 +712,6 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :param str filepath:
     :param bool apply_modifiers:
     :param str separator:
-    :param str texture_from: 'active'|'material'
     :param int default_texture_flag: 1|2|4|...|64
     :param bool flip_uv:
     :param int alt_color: -2(random 0-255)|-1(random 32-175)|0-255
@@ -744,7 +721,7 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :return:
     """
     exporter = ModelExporter(apply_modifiers, separator,
-                             texture_from, default_texture_flag, flip_uv, alt_color,
+                             default_texture_flag, flip_uv, alt_color,
                              matrix, f15_rot_space, **kwargs)
     if exporter.build_model(obj or context.active_object):
         with open(filepath, 'wb') as f:
