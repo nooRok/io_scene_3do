@@ -277,7 +277,7 @@ def has_area(o, a, b, ndigits=None):
     return abs(round(v1.dot(v2), ndigits=ndigits)) < 1.0
 
 
-class ModelExporter:
+class Exporter:
     def __init__(self, apply_modifiers, separator,
                  texture_flag, flip_uv, alt_color,
                  matrix, f15_rot_space, *args, **kwargs):
@@ -720,9 +720,9 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :param bpy.types.Object obj:
     :return:
     """
-    exporter = ModelExporter(apply_modifiers, separator,
-                             default_texture_flag, flip_uv, alt_color,
-                             matrix, f15_rot_space, **kwargs)
+    exporter = Exporter(apply_modifiers, separator,
+                        default_texture_flag, flip_uv, alt_color,
+                        matrix, f15_rot_space, **kwargs)
     if exporter.build_model(obj or context.active_object):
         with open(filepath, 'wb') as f:
             f.write(exporter.model.to_bytes())
