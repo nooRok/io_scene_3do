@@ -481,12 +481,12 @@ class ModelImporter:
         self._lod_lv = lod_level
         self._read_flavor(self._model.header.root_offset)
 
-    def link_objects(self, scale=0, context=None):
+    def link_objects(self, context=None, scale=0):
         """
         Link objects to current scene
 
-        :param int scale: 0=auto (object=10000, track=1000000)
         :param bpy.types.Context context:
+        :param int scale: 0=auto (object=10000, track=1000000)
         """
         # scale
         scale = (scale or (1000000 if self._model.is_track() else 10000))
@@ -541,6 +541,6 @@ def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
                           merged_obj_name if merge_faces else '',
                           separator,
                           lod_level)
-    importer.link_objects(scale, context)
+    importer.link_objects(context, scale)
     operator.report({'INFO'}, 'Model imported ({})'.format(filepath))
     return {'FINISHED'}
