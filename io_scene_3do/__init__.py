@@ -119,10 +119,12 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
     bl_options = {'UNDO'}
     filename_ext = '.3do'
     filter_glob = StringProperty(default='*.3do', options={'HIDDEN'})
+    #
     scale = IntProperty(name='Scale',
                         description='3do model scale (1*n) '
                                     '0=use object property "scale"',
                         default=0)
+    # color, texture
     alt_color = IntProperty(name='Alt color',
                             description=('Color for face with no material '
                                          '-1: Random index in range 32-175 '
@@ -150,8 +152,12 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
     flip_uv = BoolProperty(name='Flip UV',
                            description='Flip UV vertically',
                            default=True)
+    # modifier
     apply_modifiers = BoolProperty(name='Apply Object Modifiers',
                                    default=True)
+    separator = StringProperty(name='Separator', default=':',
+                               description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
+    # ex obj
     f15_rot_space = EnumProperty(items=[('basis', 'Basis', 'Local Space'),
                                         ('parent', 'Parent', 'Local Space'),
                                         ('local', 'Local', 'Local Space'),
@@ -159,19 +165,18 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                                  name='F15 Matrix',
                                  description='Matrix space for F15 object rotation',
                                  default='basis')
-    apply_global_mx_f15 = BoolProperty(name='Apply Global Matrix',
-                                       description='Apply global orientation to F15 objects',
-                                       default=False)
+    #
     export_all = BoolProperty(name='Export All Selected Objects',
                               description='Object name is used as filename. '
                                           'Input box value is ignored.',
                               default=False)
+    # logging
     c_log_lv_ = EnumProperty(items=log_lvs[:-1],
                              name='Console logging level',
                              description='Logging threshold level for console',
-                             default='20',
+                             default='30',
                              update=lambda s, c: setattr(s, 'c_log_lv', int(s.c_log_lv_)))
-    c_log_lv = IntProperty(default=20, options={'HIDDEN'})
+    c_log_lv = IntProperty(default=30, options={'HIDDEN'})
     f_log_lv_ = EnumProperty(items=log_lvs,
                              name='File logging level',
                              description='Logging threshold level for logfile',
@@ -179,8 +184,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                              update=lambda s, c: setattr(
                                  s, 'f_log_lv', int(s.f_log_lv_)))
     f_log_lv = IntProperty(default=-1, options={'HIDDEN'})
-    separator = StringProperty(name='Separator', default=':',
-                               description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
 
     def __enter__(self):
         st_hdlr.setLevel(self.c_log_lv)
@@ -192,7 +195,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         handlers = [h for h in logger.handlers
-                    if type(h) != StreamHandler]
+                    if isinstance(h, FileHandler)]
         for h in handlers:
             h.close()
             logger.removeHandler(h)
@@ -238,7 +241,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         box_f15_mx = layout.box()
         box_f15_mx.label('F15 Matrix:')
         box_f15_mx.prop(self, 'f15_rot_space')
-        box_f15_mx.prop(self, 'apply_global_mx_f15')
         box_mtl = layout.box()
         box_mtl.prop(self, 'alt_color')
         box_mtl.prop(self, 'tex_flag_')
