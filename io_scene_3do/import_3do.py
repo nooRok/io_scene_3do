@@ -481,12 +481,12 @@ class ModelImporter:
         self._lod_lv = lod_level
         self._read_flavor(self._model.header.root_offset)
 
-    def link_objects(self, scale=0, context=None):
+    def link_objects(self, context, scale=0):
         """
         Link objects to current scene
 
-        :param int scale: 0=auto (object=10000, track=1000000)
         :param bpy.types.Context context:
+        :param int scale: 0=auto (object=10000, track=1000000)
         """
         # scale
         scale = (scale or (1000000 if self._model.is_track() else 10000))
@@ -499,13 +499,13 @@ class ModelImporter:
         # link
         grp = get_group(os.path.basename(self.filepath))
         for obj in (list(self._objects.values()) + self._dummies):
-            (context or bpy.context).scene.objects.link(obj)
+            context.scene.objects.link(obj)
             grp.objects.link(obj)
         if self._merged_obj_name:
             mrg_obj = self._create_merged_object()
             mrg_obj['ref_source'] = True
             mrg_obj.scale = scale_vec
-            (context or bpy.context).scene.objects.link(mrg_obj)
+            context.scene.objects.link(mrg_obj)
 
     @property
     def merge_uv_maps(self):
@@ -541,6 +541,6 @@ def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
                           merged_obj_name if merge_faces else '',
                           separator,
                           lod_level)
-    importer.link_objects(scale, context)
+    importer.link_objects(context, scale)
     operator.report({'INFO'}, 'Model imported ({})'.format(filepath))
     return {'FINISHED'}
