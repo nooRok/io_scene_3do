@@ -46,9 +46,9 @@ def register_texture(name, width=256, height=256):
     :return:
     :rtype: bpy.types.ImageTexture
     """
+    assert width and height, [width, height]
     if name in bpy.data.textures:
         return bpy.data.textures[name]
-    assert width and height, [width, height]
     tex = bpy.data.textures.new(name=name, type='IMAGE')
     img = bpy.data.images.new(name=build_id(name, 'image'),
                               width=width, height=height)
@@ -61,7 +61,7 @@ def register_texture(name, width=256, height=256):
 def register_material(material_id, texture_id=None):
     """
 
-    :param material_id:
+    :param str material_id:
     :param str texture_id:
     :return:
     :rtype: bpy.types.Material
