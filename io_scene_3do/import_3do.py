@@ -476,7 +476,7 @@ class ModelImporter:
                 register_material(mtl_name, mip_name)
             else:  # 01
                 assert isinstance(f, F01)
-                register_material(f.color)
+                register_material(str(f.color))
 
     def read_flavors(self, merge_uv_maps, merged_obj_name='', separator=':', lod_level=0b000):
         """
