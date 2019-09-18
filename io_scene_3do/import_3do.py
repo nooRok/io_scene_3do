@@ -46,6 +46,7 @@ def register_texture(name, width=256, height=256):
     :return:
     :rtype: bpy.types.ImageTexture
     """
+    assert isinstance(name, str)
     assert width and height, [width, height]
     if name in bpy.data.textures:
         return bpy.data.textures[name]
@@ -66,6 +67,7 @@ def register_material(material_id, texture_id=None):
     :return:
     :rtype: bpy.types.Material
     """
+    assert isinstance(material_id, str)
     mtl_id = str(material_id)
     if mtl_id in bpy.data.materials:
         return bpy.data.materials[mtl_id]
