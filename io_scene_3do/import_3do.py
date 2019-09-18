@@ -116,17 +116,6 @@ def get_group(name):
             bpy.data.groups.new(name))
 
 
-def set_dupli_group(obj, group, type_='GROUP'):
-    """
-
-    :param bpy.types.Object obj:
-    :param bpy.types.Group group:
-    :param str type_:
-    """
-    obj.dupli_group = group
-    obj.dupli_type = type_
-
-
 def get_material(material_id):
     """
     Find non-zero-filled -> zero-filled -> new non-zero-filled
@@ -346,9 +335,9 @@ class ModelImporter:
             props['ref'] = org_obj.name
             set_properties(obj, **props)
             group = get_group(org_obj.name)
-            if len(group.objects) == 0:  # a new group created this time
+            if len(group.objects) == 0:
                 group.objects.link(org_obj)
-            set_dupli_group(obj, group)
+            group.objects.link(obj)
             self._dummies.append(obj)
         elif isinstance(f, FaceFlavor):  # 01, 02
             if self._merged_obj_name:
@@ -410,7 +399,7 @@ class ModelImporter:
                         obj.show_name = True
                         self._ext_objects.append(obj)
                         group = get_group(filename)
-                        set_dupli_group(obj, group)
+                        group.objects.link(obj)
                     else:  # pmp 18
                         raise NotImplementedError('F18')
 
