@@ -68,10 +68,9 @@ def register_material(material_id, texture_id=None):
     :rtype: bpy.types.Material
     """
     assert isinstance(material_id, str)
-    mtl_id = str(material_id)
-    if mtl_id in bpy.data.materials:
-        return bpy.data.materials[mtl_id]
-    mtl = bpy.data.materials.new(mtl_id)
+    if material_id in bpy.data.materials:
+        return bpy.data.materials[material_id]
+    mtl = bpy.data.materials.new(material_id)
     if texture_id:
         texture = bpy.data.textures[texture_id]
         ts = mtl.texture_slots.create(0)  # addだと重複して登録される
