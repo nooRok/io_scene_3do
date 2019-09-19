@@ -62,19 +62,22 @@ class Import3DO(bpy.types.Operator, ImportHelper):
     bl_options = {'UNDO'}
     filename_ext = '.3do'
     filter_glob = StringProperty(default='*.3do', options={'HIDDEN'})
+    #
     scale = IntProperty(name='Scale',
                         description='3do model scale (1:n) '
                                     '0=auto '
                                     '(object=1:10000 / track=1:1000000)',
                         default=0)
-    # grp = BoolProperty(name='Group data tree', default=True)
+    # trk LOD
     lod_hi = BoolProperty(name='HI', default=True)
     lod_mid = BoolProperty(name='MID', default=True)
     lod_lo = BoolProperty(name='LO', default=True)
+    # default MIP size
     tex_w = IntProperty(name='Mip Width', default=256,
                         description='Default texture width')
     tex_h = IntProperty(name='Mip Height', default=256,
                         description='Default texture height')
+    # merge
     merge_faces = BoolProperty(name='Merge Faces', default=True)
     merge_uv_maps = BoolProperty(name='Merge UV Maps', default=False)
     merged_obj_name = StringProperty(name='Name', default='',
@@ -108,9 +111,9 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         box_mrg = layout.box()
         box_mrg.label('Merge options:')
         box_mrg.prop(self, 'merge_faces')
-        box_mrg.prop(self, 'merge_uv_maps')
         box_mrg.prop(self, 'merged_obj_name')
         box_mrg.prop(self, 'separator')
+        box_mrg.prop(self, 'merge_uv_maps')
 
 
 class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
@@ -119,10 +122,12 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
     bl_options = {'UNDO'}
     filename_ext = '.3do'
     filter_glob = StringProperty(default='*.3do', options={'HIDDEN'})
+    #
     scale = IntProperty(name='Scale',
                         description='3do model scale (1*n) '
                                     '0=use object property "scale"',
                         default=0)
+    # color, texture
     alt_color = IntProperty(name='Alt color',
                             description=('Color for face with no material '
                                          '-1: Random index in range 32-175 '
@@ -142,16 +147,15 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                              default='8',
                              update=lambda s, c: setattr(s, 'tex_flag', int(s.tex_flag_)))
     tex_flag = IntProperty(default=8, options={'HIDDEN'})
-    tex_from = EnumProperty(items=[('material', 'Material', ''),
-                                   ('active', 'Active UV Map', '')],
-                            name='Texture Image From',
-                            description='Texture image from',
-                            default='material')
     flip_uv = BoolProperty(name='Flip UV',
                            description='Flip UV vertically',
                            default=True)
+    # modifier
     apply_modifiers = BoolProperty(name='Apply Object Modifiers',
                                    default=True)
+    separator = StringProperty(name='Separator', default=':',
+                               description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
+    # ex obj
     f15_rot_space = EnumProperty(items=[('basis', 'Basis', 'Local Space'),
                                         ('parent', 'Parent', 'Local Space'),
                                         ('local', 'Local', 'Local Space'),
@@ -159,19 +163,18 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                                  name='F15 Matrix',
                                  description='Matrix space for F15 object rotation',
                                  default='basis')
-    apply_global_mx_f15 = BoolProperty(name='Apply Global Matrix',
-                                       description='Apply global orientation to F15 objects',
-                                       default=False)
+    #
     export_all = BoolProperty(name='Export All Selected Objects',
                               description='Object name is used as filename. '
                                           'Input box value is ignored.',
                               default=False)
+    # logging
     c_log_lv_ = EnumProperty(items=log_lvs[:-1],
                              name='Console logging level',
                              description='Logging threshold level for console',
-                             default='20',
+                             default='30',
                              update=lambda s, c: setattr(s, 'c_log_lv', int(s.c_log_lv_)))
-    c_log_lv = IntProperty(default=20, options={'HIDDEN'})
+    c_log_lv = IntProperty(default=30, options={'HIDDEN'})
     f_log_lv_ = EnumProperty(items=log_lvs,
                              name='File logging level',
                              description='Logging threshold level for logfile',
@@ -179,8 +182,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                              update=lambda s, c: setattr(
                                  s, 'f_log_lv', int(s.f_log_lv_)))
     f_log_lv = IntProperty(default=-1, options={'HIDDEN'})
-    separator = StringProperty(name='Separator', default=':',
-                               description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
 
     def __enter__(self):
         st_hdlr.setLevel(self.c_log_lv)
@@ -192,7 +193,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         handlers = [h for h in logger.handlers
-                    if type(h) != StreamHandler]
+                    if isinstance(h, FileHandler)]
         for h in handlers:
             h.close()
             logger.removeHandler(h)
@@ -201,7 +202,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         with self:
             try:
                 kw = self.as_keywords()
-                kw['texture_from'] = kw.pop('tex_from')
                 kw['default_texture_flag'] = kw.pop('tex_flag')
                 rot_mx = axis_conversion(to_forward=self.axis_forward,
                                          to_up=self.axis_up).to_4x4()
@@ -235,20 +235,18 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         box_mx.prop(self, 'scale')
         box_mx.prop(self, 'axis_forward')
         box_mx.prop(self, 'axis_up')
-        box_f15_mx = layout.box()
-        box_f15_mx.label('F15 Matrix:')
-        box_f15_mx.prop(self, 'f15_rot_space')
-        box_f15_mx.prop(self, 'apply_global_mx_f15')
         box_mtl = layout.box()
         box_mtl.prop(self, 'alt_color')
         box_mtl.prop(self, 'tex_flag_')
-        box_mtl.prop(self, 'tex_from')
         box_mtl.prop(self, 'flip_uv')
         box = layout.box()
         box.prop(self, 'apply_modifiers')
         if len(context.selected_objects) > 1:
             box.prop(self, 'export_all')
         box.prop(self, 'separator')
+        box_f15_mx = layout.box()
+        box_f15_mx.label('F15 Matrix:')
+        box_f15_mx.prop(self, 'f15_rot_space')
         box_log = layout.box()
         box_log.prop(self, 'c_log_lv_')
         box_log.prop(self, 'f_log_lv_')

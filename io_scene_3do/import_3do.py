@@ -46,9 +46,10 @@ def register_texture(name, width=256, height=256):
     :return:
     :rtype: bpy.types.ImageTexture
     """
+    assert isinstance(name, str)
+    assert width and height, [width, height]
     if name in bpy.data.textures:
         return bpy.data.textures[name]
-    assert width and height, [width, height]
     tex = bpy.data.textures.new(name=name, type='IMAGE')
     img = bpy.data.images.new(name=build_id(name, 'image'),
                               width=width, height=height)
@@ -61,15 +62,15 @@ def register_texture(name, width=256, height=256):
 def register_material(material_id, texture_id=None):
     """
 
-    :param material_id:
+    :param str material_id:
     :param str texture_id:
     :return:
     :rtype: bpy.types.Material
     """
-    mtl_id = str(material_id)
-    if mtl_id in bpy.data.materials:
-        return bpy.data.materials[mtl_id]
-    mtl = bpy.data.materials.new(mtl_id)
+    assert isinstance(material_id, str)
+    if material_id in bpy.data.materials:
+        return bpy.data.materials[material_id]
+    mtl = bpy.data.materials.new(material_id)
     if texture_id:
         texture = bpy.data.textures[texture_id]
         ts = mtl.texture_slots.create(0)  # addだと重複して登録される
@@ -113,17 +114,6 @@ def get_group(name):
     """
     return (bpy.data.groups.get(name) or
             bpy.data.groups.new(name))
-
-
-def set_dupli_group(obj, group, type_='GROUP'):
-    """
-
-    :param bpy.types.Object obj:
-    :param bpy.types.Group group:
-    :param str type_:
-    """
-    obj.dupli_group = group
-    obj.dupli_type = type_
 
 
 def get_material(material_id):
@@ -193,7 +183,7 @@ def set_uv_coordinates(uv_loops, vertex_uvs, size):
         uv_loop.uv = l_uv
 
 
-class ModelImporter:
+class Importer:
     def __init__(self, filepath, *args, **kwargs):
         self.filepath = filepath
         self._sep = ''
@@ -291,20 +281,21 @@ class ModelImporter:
             return get_material(mtl_name)
         return get_material(f.color)
 
-    def _set_uv_coordinates(self, mesh, material, vertex_indices, vertex_uvs):
+    def _set_uv_coordinates(self, mesh, material, vertex_indices, vertex_uvs, face_index=0):
         """
 
         :param bpy.types.Mesh mesh:
         :param bpy.types.Material material:
         :param list[int] vertex_indices:
         :param list[list[int]] vertex_uvs:
+        :param int face_index:
         """
         tex_slot = material.texture_slots[0]
         img = tex_slot.texture.image
         img_name = 'texture' if self.merge_uv_maps else img.name
         uv_map = get_uv_map(mesh, build_id(img_name, 'uv'))
-        # set_uv_map_image(uv_map, img)  # Multitexture
-        tex_slot.uv_layer = uv_map.name  # GLSL
+        uv_map.data[face_index].image = img
+        tex_slot.uv_layer = uv_map.name
         uv_loops = [mesh.uv_layers[uv_map.name].data[i]
                     for i in vertex_indices]
         size = get_material_texture(material.name).image.size
@@ -344,9 +335,9 @@ class ModelImporter:
             props['ref'] = org_obj.name
             set_properties(obj, **props)
             group = get_group(org_obj.name)
-            if len(group.objects) == 0:  # a new group created this time
+            if len(group.objects) == 0:
                 group.objects.link(org_obj)
-            set_dupli_group(obj, group)
+            group.objects.link(obj)
             self._dummies.append(obj)
         elif isinstance(f, FaceFlavor):  # 01, 02
             if self._merged_obj_name:
@@ -408,9 +399,9 @@ class ModelImporter:
                         obj.show_name = True
                         self._ext_objects.append(obj)
                         group = get_group(filename)
-                        set_dupli_group(obj, group)
+                        group.objects.link(obj)
                     else:  # pmp 18
-                        pass
+                        raise NotImplementedError('F18')
 
     def _create_merged_object(self):
         """
@@ -437,7 +428,7 @@ class ModelImporter:
         for o, idc, uvs, poly in zip(offsets, vtx_idc, vtx_uvs, mesh.polygons):
             mtl = self._get_face_material(o)
             if isinstance(self._flavors[o], F02):
-                self._set_uv_coordinates(mesh, mtl, idc, uvs)
+                self._set_uv_coordinates(mesh, mtl, idc, uvs, poly.index)
             poly.material_index = get_material_index(mtl, mesh, True)
         return obj
 
@@ -474,7 +465,7 @@ class ModelImporter:
                 register_material(mtl_name, mip_name)
             else:  # 01
                 assert isinstance(f, F01)
-                register_material(f.color)
+                register_material(str(f.color))
 
     def read_flavors(self, merge_uv_maps, merged_obj_name='', separator=':', lod_level=0b000):
         """
@@ -490,12 +481,12 @@ class ModelImporter:
         self._lod_lv = lod_level
         self._read_flavor(self._model.header.root_offset)
 
-    def link_objects(self, scale=0, context=None):
+    def link_objects(self, context, scale=0):
         """
         Link objects to current scene
 
-        :param int scale: 0=auto (object=10000, track=1000000)
         :param bpy.types.Context context:
+        :param int scale: 0=auto (object=10000, track=1000000)
         """
         # scale
         scale = (scale or (1000000 if self._model.is_track() else 10000))
@@ -508,13 +499,13 @@ class ModelImporter:
         # link
         grp = get_group(os.path.basename(self.filepath))
         for obj in (list(self._objects.values()) + self._dummies):
-            (context or bpy.context).scene.objects.link(obj)
+            context.scene.objects.link(obj)
             grp.objects.link(obj)
         if self._merged_obj_name:
             mrg_obj = self._create_merged_object()
             mrg_obj['ref_source'] = True
             mrg_obj.scale = scale_vec
-            (context or bpy.context).scene.objects.link(mrg_obj)
+            context.scene.objects.link(mrg_obj)
 
     @property
     def merge_uv_maps(self):
@@ -542,7 +533,7 @@ def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
     :param str separator:
     :return:
     """
-    importer = ModelImporter(filepath)
+    importer = Importer(filepath)
     importer.read_model()
     importer.register_textures(tex_h, tex_w)
     importer.register_materials()
@@ -550,6 +541,6 @@ def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
                           merged_obj_name if merge_faces else '',
                           separator,
                           lod_level)
-    importer.link_objects(scale, context)
+    importer.link_objects(context, scale)
     operator.report({'INFO'}, 'Model imported ({})'.format(filepath))
     return {'FINISHED'}
