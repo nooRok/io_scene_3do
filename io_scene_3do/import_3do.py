@@ -145,17 +145,16 @@ def get_material_index(material, mesh, append=False):
     return mtl_idx
 
 
-def get_material_texture(material_id, index=0):
+def get_material_texture(material, index=0):
     """
 
-    :param str material_id:
+    :param bpy.types.Material material:
     :param int index:
     :return:
-    :rtype: bpy.types.Texture|bpy.types.ImageTexture
+    :rtype: bpy.types.ImageTexture
     """
-    mtl = get_material(material_id)
-    tex_slot = mtl.texture_slots[index]
-    return tex_slot.texture  # bpy.data.textures[mip_name]
+    tex_slot = material.texture_slots[index]
+    return tex_slot.texture
 
 
 def get_uv_map(mesh, name):
@@ -300,7 +299,7 @@ class Importer:
         tex_slot.uv_layer = uv_map.name
         uv_loops = [mesh.uv_layers[uv_map.name].data[i]
                     for i in vertex_indices]
-        size = get_material_texture(material.name).image.size
+        size = get_material_texture(material).image.size
         set_uv_coordinates(uv_loops, vertex_uvs, size)
 
     def _create_object_data(self, offset):
