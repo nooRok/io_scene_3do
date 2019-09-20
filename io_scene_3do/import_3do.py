@@ -310,26 +310,6 @@ class Importer:
         material.texture_slots[0].uv_layer = uv_map.name
         return uv_map
 
-    def _set_uv_coordinates(self, mesh, material, vertex_indices, vertex_uvs, face_index=0):
-        """
-
-        :param bpy.types.Mesh mesh:
-        :param bpy.types.Material material:
-        :param list[int] vertex_indices:
-        :param list[list[int]] vertex_uvs:
-        :param int face_index:
-        """
-        tex_slot = material.texture_slots[0]
-        img = tex_slot.texture.image
-        img_name = 'texture' if self.merge_uv_maps else img.name
-        uv_map = get_uv_map(mesh, build_id(img_name, 'uv'))
-        uv_map.data[face_index].image = img
-        tex_slot.uv_layer = uv_map.name
-        uv_loops = [mesh.uv_layers[uv_map.name].data[i]
-                    for i in vertex_indices]
-        size = get_material_texture(material).image.size
-        set_uv_coordinates(uv_loops, vertex_uvs, size)
-
     def _create_object_data(self, offset):
         """
         For object.data
