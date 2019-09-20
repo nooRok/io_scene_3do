@@ -383,7 +383,10 @@ class Importer:
                 obj = create_object(f_id, mesh, par_obj)
                 mtl = self._get_face_material(offset)
                 if isinstance(f, F02):
-                    self._set_uv_coordinates(mesh, mtl, idc, uvs)
+                    uv_map = self._set_uv_map(mesh, mtl)
+                    uv_loops = get_uv_loops(mesh, uv_map.name)
+                    img = get_material_texture(mtl).image
+                    set_uv_coordinates(uv_loops, uvs, img.size)
                 obj.active_material = mtl
                 set_properties(obj, **self._get_flavor_properties(offset))
             self._objects[f.offset] = obj
@@ -457,7 +460,10 @@ class Importer:
         for o, idc, uvs, poly in zip(offsets, vtx_idc, vtx_uvs, mesh.polygons):
             mtl = self._get_face_material(o)
             if isinstance(self._flavors[o], F02):
-                self._set_uv_coordinates(mesh, mtl, idc, uvs, poly.index)
+                uv_map = self._set_uv_map(mesh, mtl, poly.index)
+                uv_loops = get_uv_loops(mesh, uv_map.name, poly.index)
+                img = get_material_texture(mtl).image
+                set_uv_coordinates(uv_loops, uvs, img.size)
             poly.material_index = get_material_index(mtl, mesh, True)
         return obj
 
