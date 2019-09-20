@@ -169,6 +169,19 @@ def get_uv_map(mesh, name):
     return uv_map
 
 
+def get_uv_loops(mesh, uv_map_name, face_index=0):
+    """
+
+    :param bpy.types.Mesh mesh:
+    :param str uv_map_name:
+    :param int face_index:
+    :return:
+    :rtype: list[bpy.types.MeshUVLoop]
+    """
+    idc = mesh.polygons[face_index].loop_indices
+    return [mesh.uv_layers[uv_map_name].data[i] for i in idc]
+
+
 def set_uv_coordinates(uv_loops, vertex_uvs, size):
     """
 
