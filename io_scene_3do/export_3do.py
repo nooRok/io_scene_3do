@@ -1,4 +1,5 @@
 # coding: utf-8
+from itertools import zip_longest
 from logging import getLogger
 from math import degrees
 from random import randrange
@@ -34,12 +35,14 @@ class _Cache:
         for i in cls._instances:  # type: _Cache
             i.cache.clear()
 
-    def __call__(self, obj, *args, **kwargs):
-        if obj in self.cache:
-            return self.cache[obj]
-        return self.cache.setdefault(obj, self.f(obj, *args, **kwargs))
+    def __call__(self, *args, **kwargs):
+        key = args + tuple(kwargs.items())
+        if key in self.cache:
+            return self.cache[key]
+        return self.cache.setdefault(key, self.f(*args, **kwargs))
 
 
+@_Cache
 def get_reference_keys(obj, separator):
     """
 
@@ -56,24 +59,44 @@ def get_reference_keys(obj, separator):
 
 
 @_Cache
+def get_reference_object(obj, separator, recursive=True):
+    """
+
+    :param bpy.types.Object obj:
+    :param str separator:
+    :param bool recursive:
+    :return:
+    :rtype: bpy.types.Object
+    :raise: Exception (RecursionError)
+    """
+    ref_keys = get_reference_keys(obj, separator)
+    if ref_keys:
+        ref_obj = bpy.data.objects[ref_keys[0]]
+        if recursive:
+            return get_reference_object(ref_obj, separator) or ref_obj
+        return ref_obj
+    return None
+
+
+@_Cache
 def get_vertex_group_map(obj, mesh):
     """
 
     :param bpy.types.Object obj:
     :param bpy.types.Mesh mesh:
-    :return: {vertex group name: [face index in vertex group, ...], ...}
+    :return: {vertex group name: [face index, ...], ...}
     :rtype: dict[str, list[int]]
     """
-    v_grps = [set(vg_elem.group for vg_elem in v.groups)
-              for v in mesh.vertices]  # [[vtx grp idx a vtx is member of (int), ...], ...]
-    v_grp_map = {}
+    vg_idcs = [[vg.group for vg in v.groups] for v in mesh.vertices]
+    # key: vtx_idx, val: [vg_idx(int), ...]
+    pairs = [(vg.name, []) for vg in obj.vertex_groups]
+    # key: vg_idx val: [vg_name(str), [f_idx(int), ...]]
     for f in mesh.polygons:  # type: bpy.types.MeshPolygon
-        fv_grps = (v_grps[v_idx] for v_idx in f.vertices)  # [[頂点に設定されたvtx grp, ...], ...]
-        v_grp_idc = set.intersection(*fv_grps)  # 面の持つ全ての頂点が含まれる(=面を構成できる) vtx grp
-        for v_grp_idx in v_grp_idc:
-            v_grp = obj.vertex_groups[v_grp_idx]  # type: bpy.types.VertexGroup
-            v_grp_map.setdefault(v_grp.name, []).append(f.index)
-    return v_grp_map
+        f_vg_idcs = (vg_idcs[vi] for vi in f.vertices)
+        for vg_idx in set.intersection(*map(set, f_vg_idcs)):
+            # index of vertex group that contains all of vertices of the face
+            pairs[vg_idx][1].append(f.index)
+    return dict(pairs)  # {k: v for k, v in pairs if v}
 
 
 def get_children(obj, key=None):
@@ -124,7 +147,7 @@ def get_color_index(material_name, alt_color_index=None):
             return randrange(25, 176)
         elif alt_color_index is not None:
             return get_color_index(alt_color_index)
-        raise ValueError('color index is out of range (-2...255): {}'.format(index))
+        raise ValueError('Color index must be between -2 and 255: {}'.format(index))
     except Exception:
         raise
 
@@ -171,67 +194,53 @@ def get_texture_slot(material):
 
     :param bpy.types.Material material:
     :return: first enabled texture slot
-    :rtype: bpy.types.MaterialTextureSlot|bpy.types.TextureSlot
+    :rtype: bpy.types.MaterialTextureSlot
     """
     slots = (s for s in material.texture_slots if s and s.use)
-    return next(slots, None)
+    slot = next(slots, None)
+    if slot:
+        assert isinstance(slot, bpy.types.MaterialTextureSlot)
+        assert slot.texture_coords == 'UV'
+        assert slot.texture.type == 'IMAGE'
+    return slot
 
 
-def get_face_texture_image(mesh, face_index, from_material=False):
+def get_face_texture_image(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     :return:
     :rtype: bpy.types.Image
     """
-    if from_material:
-        mtl = get_face_material(mesh, face_index)
-        if mtl:
-            t_slot = get_texture_slot(mtl)
-            if t_slot and t_slot.texture.type == 'IMAGE':
-                return t_slot.texture.image
-    else:
-        uvt = mesh.uv_textures.active
-        if uvt:
-            img = uvt.data[face_index].image
-            assert img
-            return img
+    mtl = get_face_material(mesh, face_index)
+    t_slot = get_texture_slot(mtl)
+    if t_slot:
+        return t_slot.texture.image
 
 
-def get_uv_layer(mesh, face_index, from_material=False):
+def get_uv_layer(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     :rtype: bpy.types.MeshUVLoopLayer
     """
-    if from_material:
-        mtl = get_face_material(mesh, face_index)
-        if mtl:
-            t_slot = get_texture_slot(mtl)
-            if t_slot:
-                assert t_slot.texture_coords == 'UV'
-                assert t_slot.texture.type == 'IMAGE'
-                uvm_name = t_slot.uv_layer
-                if uvm_name:
-                    return mesh.uv_layers[uvm_name]
-                return get_uv_layer(mesh, face_index, False)
-    else:
-        return mesh.uv_layers.active
+    mtl = get_face_material(mesh, face_index)
+    t_slot = get_texture_slot(mtl)
+    if t_slot:
+        assert t_slot.uv_layer  # str
+        return mesh.uv_layers[t_slot.uv_layer]
 
 
-def gen_face_uv_vertices(mesh, face_index, from_material=False):
+def gen_face_uv_vertices(mesh, face_index):
     """
 
     :param bpy.types.Mesh mesh:
     :param int face_index:
-    :param bool from_material:
     """
     face = mesh.polygons[face_index]
-    uv_layer = get_uv_layer(mesh, face_index, from_material)
+    uv_layer = get_uv_layer(mesh, face_index)
     if uv_layer:
         for i in face.loop_indices:  # type: int
             yield uv_layer.data[i].uv.copy()
@@ -253,15 +262,29 @@ def get_pixel_coordinate(uv_vertex, image_size, flip_uv=False):
     return None
 
 
-class ModelExporter:
+def has_area(o, a, b, ndigits=None):
+    """
+
+    :param mathutils.Vector o: origin
+    :param mathutils.Vector a: point a
+    :param mathutils.Vector b: point b
+    :param int ndigits:
+    :return:
+    :rtype: bool
+    """
+    v1 = (a - o).normalized()
+    v2 = (b - o).normalized()
+    return abs(round(v1.dot(v2), ndigits=ndigits)) < 1.0
+
+
+class Exporter:
     def __init__(self, apply_modifiers, separator,
-                 texture_from, texture_flag, flip_uv, alt_color,
+                 texture_flag, flip_uv, alt_color,
                  matrix, f15_rot_space, *args, **kwargs):
         """
 
         :param bool apply_modifiers:
         :param str separator:
-        :param str texture_from: 'active'|'material'
         :param int texture_flag:
             Texture flag for F02 without texture flag value (1|2|4|...|64)
         :param bool flip_uv:
@@ -276,12 +299,11 @@ class ModelExporter:
         self._apply_modifiers = apply_modifiers
         self._sep = separator
         # material
-        self._tex_from = texture_from
         self._tex_flag = texture_flag
         self._flip_uv = flip_uv
         self._alt_color = alt_color
         # matrix
-        self._matrix = matrix.to_4x4() or mathutils.Matrix()  # 4x4
+        self._matrix = matrix.to_4x4()
         self._f15_rot_space = f15_rot_space
         # maps
         self._files = {'mip': {}, 'pmp': {}, '3do': {}}
@@ -292,17 +314,12 @@ class ModelExporter:
         """
 
         :param bpy.types.Object obj:
+        :param bool recursive:
         :return:
         :rtype: bpy.types.Object
         :raise: Exception (RecursionError)
         """
-        ref_keys = get_reference_keys(obj, self._sep)
-        if ref_keys:
-            ref_obj = bpy.data.objects[ref_keys[0]]
-            if recursive:
-                return self._get_reference_object(ref_obj) or ref_obj
-            return ref_obj
-        return None
+        return get_reference_object(obj, self._sep, recursive)
 
     def _get_matrix(self, obj, space='world'):
         """
@@ -316,7 +333,7 @@ class ModelExporter:
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
             ref_mx = self._get_matrix(ref_obj, space)
-            mx.translation = mx.to_translation() - ref_mx.to_translation()
+            mx.translation = (mx - ref_mx).to_translation()
         return mx
 
     def _get_file_index(self, key, filename):
@@ -328,8 +345,7 @@ class ModelExporter:
         :rtype: int
         """
         files = self._files[key]
-        idx = files.setdefault(filename, len(files))
-        return idx
+        return files.setdefault(filename, len(files))
 
     def _get_child_offsets(self, obj, order=None):
         """
@@ -353,11 +369,12 @@ class ModelExporter:
         if ref_obj:
             return self._get_mesh(ref_obj)
         if self._apply_modifiers and obj.modifiers:
-            mesh = (self._meshes.get(obj) or
-                    self._meshes.setdefault(
-                        obj, obj.to_mesh(bpy.context.scene, True, 'RENDER')))
-            logger.info('{} {}'.format(obj, mesh))
-            return mesh
+            if obj in self._meshes:
+                return self._meshes[obj]
+            mesh = obj.to_mesh(bpy.context.scene, True, 'RENDER')
+            logger.info('mod Ob(%s): [Me(%s) -> Me(%s)]',
+                        obj.name, obj.data.name, mesh.name)
+            return self._meshes.setdefault(obj, mesh)
         return obj.data
 
     def _get_faces(self, obj):
@@ -370,14 +387,15 @@ class ModelExporter:
         mesh = self._get_mesh(obj)
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
-            logger.info('%s %s', obj, ref_obj)
-            v_grp_map = get_vertex_group_map(ref_obj, mesh)
-            v_grp_name = get_reference_keys(obj, self._sep)[1]
+            name = get_reference_keys(obj, self._sep)[1]  # vtx group name
+            logger.info('grp Ob(%s): [Ob(%s).Gr(%s): Me(%s)]',
+                        obj.name, ref_obj.name, name, mesh.name)
             try:
-                return [mesh.polygons[i] for i in v_grp_map[v_grp_name]]
+                vtx_group = get_vertex_group_map(ref_obj, mesh)[name]
+                return [mesh.polygons[i] for i in vtx_group]
             except KeyError:
                 msg = "'{}{}{}' referred from '{}'".format(
-                    ref_obj.name, self._sep, v_grp_name, obj.name)
+                    ref_obj.name, self._sep, name, obj.name)
                 raise KeyError(msg)
         if mesh:
             return mesh.polygons
@@ -391,9 +409,7 @@ class ModelExporter:
         :return:
         :rtype: mathutils.Vector
         """
-        if matrix:
-            return self._matrix * matrix * vertex
-        return self._matrix * vertex
+        return self._matrix * (matrix or mathutils.Matrix()) * vertex
 
     def _gen_bsp_values(self, obj):
         """
@@ -402,14 +418,11 @@ class ModelExporter:
         """
         mesh = self._get_mesh(obj)
         for f in self._get_faces(obj):
-            pts = [self._get_scaled_vertex(vtx, self._get_matrix(obj))
-                   for vtx in gen_face_vertices(mesh, f.index)]
-            pts_grps = (pts[i:i + 3] for i in range(len(pts) - 2))
-            vecs = ((a, b, c) for a, b, c in pts_grps
-                    if round(a.angle(b - a) - a.angle(c - a), 4))
-            bsp_pts = next(vecs)  # drop invalid normal values
-            bv = BspValues.from_coordinates(*bsp_pts)
-            yield bv
+            vtc = [self._get_scaled_vertex(v, self._get_matrix(obj))
+                   for v in gen_face_vertices(mesh, f.index)]
+            points = zip(vtc, vtc[1:], vtc[2:])  # [[0,1,2], [1,2,3]...]
+            coords = next(pts for pts in points if has_area(*pts, ndigits=4))
+            yield BspValues.from_coordinates(*coords)
 
     def _store_flavor(self, type_, values1=None, values2=None, obj=None):
         """
@@ -444,7 +457,7 @@ class ModelExporter:
         :return: Vertex flavor offset
         :rtype: int
         """
-        offset = self._store_flavor(0, map(round, vtx), map(int, uv or []))
+        offset = self._store_flavor(0, map(int, vtx), map(int, uv or []))
         self._flavors[offset].vtype = 2 if uv else 1
         return offset
 
@@ -457,15 +470,13 @@ class ModelExporter:
         :rtype: int
         """
         mesh = self._get_mesh(obj)
-        use_mtl = self._tex_from == 'material'
-        img = get_face_texture_image(mesh, face_index, use_mtl)
+        img = get_face_texture_image(mesh, face_index)
         face_vtc = [self._get_scaled_vertex(vtx, self._get_matrix(obj))
                     for vtx in gen_face_vertices(mesh, face_index)]
-        uv_vtc = ([get_pixel_coordinate(vtx, img.size, self._flip_uv)
-                   for vtx in gen_face_uv_vertices(mesh, face_index, use_mtl)] or
-                  [None for _ in range(len(face_vtc))])
+        uv_vtc = [get_pixel_coordinate(vtx, img.size, self._flip_uv)
+                  for vtx in gen_face_uv_vertices(mesh, face_index)]
         vf_os = [self._store_vertex_flavor(vtx, uv)
-                 for vtx, uv in zip(face_vtc, uv_vtc)]
+                 for vtx, uv in zip_longest(face_vtc, uv_vtc)]
         mtl = get_face_material(mesh, face_index)
         color_idx = get_color_index(mtl.name if mtl else '', self._alt_color)
         values1 = [color_idx, len(vf_os) - 1]
@@ -583,7 +594,7 @@ class ModelExporter:
             elif not (v1 or v2):
                 values2 = self._get_child_offsets(obj)
             else:  # v1 or v2
-                msg = 'Pair of non-empty and empty values are not allowed'
+                msg = 'v1 and v2 must be pair of valid values or pair of empties.'
                 raise ValueError(msg, v1[:], v2[:])
             values1 = [values2.pop(0), len(values2)]
             self._store_flavor(type_, values1, values2, obj)
@@ -613,10 +624,7 @@ class ModelExporter:
                         idx = self._get_file_index('3do', get_filename(obj))
                         values1[-1] = ~idx
                 else:  # if not values1:  # or some_flag
-                    mul = (a * b for a, b in zip(obj.matrix_world.translation,
-                                                 self._matrix.to_scale()))
-                    tr_vec = mathutils.Vector(mul)
-                    tr_vec.rotate(self._matrix)
+                    tr_vec = self._matrix * obj.matrix_world.translation
                     loc = [int(v) for v in tr_vec]
                     eul = self._get_matrix(obj, self._f15_rot_space).to_euler()
                     eul.y *= -1  # y- front and y+ back in blender
@@ -641,14 +649,13 @@ class ModelExporter:
         :param bool ignore_property:
         :return:
         """
-        logger.debug(obj)
+        logger.debug('Object("%s")', obj.name)
         ref_keys = get_reference_keys(obj, self._sep)
-        if ref_keys and not ref_keys[1]:  # Avoid to convert merged model
-            ref_obj = self._get_reference_object(obj, recursive=False)
-            assert ref_obj
+        if ref_keys and not ref_keys[1]:  # ref w/o vertex group
+            ref_obj = self._get_reference_object(obj, recursive=False)  # process one obj at a time
             self._build_flavor(ref_obj, ignore_property)
             self._offsets[obj] = self._offsets[ref_obj]
-            return
+            return  # avoid to convert obj (the referrer)
         if obj in self._offsets:
             return
         for c_obj in get_children(obj):
@@ -682,10 +689,10 @@ class ModelExporter:
             logger.exception('')
             raise
         finally:
-            logger.info(self._offsets)
-            logger.info(self._meshes)
+            logger.debug(self._offsets)
+            logger.debug(self._meshes)
             for mesh in self._meshes.values():
-                logger.info('%s', mesh)
+                logger.info('rem %s', mesh)
                 bpy.data.meshes.remove(mesh)
             self._meshes.clear()
             _Cache.clear()
@@ -696,7 +703,7 @@ class ModelExporter:
 
 
 def save(operator, context, filepath, apply_modifiers, separator,
-         texture_from, default_texture_flag, flip_uv, alt_color,
+         default_texture_flag, flip_uv, alt_color,
          matrix, f15_rot_space, obj=None, **kwargs):
     """
 
@@ -705,7 +712,6 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :param str filepath:
     :param bool apply_modifiers:
     :param str separator:
-    :param str texture_from: 'active'|'material'
     :param int default_texture_flag: 1|2|4|...|64
     :param bool flip_uv:
     :param int alt_color: -2(random 0-255)|-1(random 32-175)|0-255
@@ -714,9 +720,9 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :param bpy.types.Object obj:
     :return:
     """
-    exporter = ModelExporter(apply_modifiers, separator,
-                             texture_from, default_texture_flag, flip_uv, alt_color,
-                             matrix, f15_rot_space, **kwargs)
+    exporter = Exporter(apply_modifiers, separator,
+                        default_texture_flag, flip_uv, alt_color,
+                        matrix, f15_rot_space, **kwargs)
     if exporter.build_model(obj or context.active_object):
         with open(filepath, 'wb') as f:
             f.write(exporter.model.to_bytes())
