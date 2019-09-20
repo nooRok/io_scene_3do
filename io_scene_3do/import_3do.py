@@ -281,6 +281,22 @@ class Importer:
             return get_material(mtl_name)
         return get_material(str(f.color))
 
+    def _set_uv_map(self, mesh, material, face_index=0):
+        """
+
+        :param bpy.types.Mesh mesh:
+        :param bpy.types.Material material:
+        :param int face_index:
+        :return:
+        :rtype: bpy.types.MeshTexturePolyLayer
+        """
+        img = get_material_texture(material).image
+        img_name = 'texture' if self.merge_uv_maps else img.name
+        uv_map = get_uv_map(mesh, build_id(img_name, 'uv'))
+        uv_map.data[face_index].image = img
+        material.texture_slots[0].uv_layer = uv_map.name
+        return uv_map
+
     def _set_uv_coordinates(self, mesh, material, vertex_indices, vertex_uvs, face_index=0):
         """
 
