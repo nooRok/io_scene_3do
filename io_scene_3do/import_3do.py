@@ -120,13 +120,12 @@ def get_material(material_id):
     """
     Find non-zero-filled -> zero-filled -> new non-zero-filled
 
-    :param material_id:
+    :param str material_id:
     :return:
     :rtype: bpy.types.Material
     """
-    mtl_id = str(material_id)
-    return (bpy.data.materials.get(mtl_id) or
-            bpy.data.materials[mtl_id.zfill(3)])
+    return (bpy.data.materials.get(material_id) or
+            bpy.data.materials[material_id.zfill(3)])
 
 
 def get_material_index(material, mesh, append=False):
@@ -280,7 +279,7 @@ class Importer:
             mip_name = self._tex_names.get(f.offset, NIL)
             mtl_name = build_id(f.color, mip_name)
             return get_material(mtl_name)
-        return get_material(f.color)
+        return get_material(str(f.color))
 
     def _set_uv_coordinates(self, mesh, material, vertex_indices, vertex_uvs, face_index=0):
         """
