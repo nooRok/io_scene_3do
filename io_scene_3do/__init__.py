@@ -98,10 +98,10 @@ class Import3DO(bpy.types.Operator, ImportHelper):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, 'scale')
-        box_mip_size = layout.box()
-        box_mip_size.label('Default .mip size:')
-        box_mip_size.prop(self, 'tex_w')
-        box_mip_size.prop(self, 'tex_h')
+        box_mip = layout.box()
+        box_mip.label('Default .mip size:')
+        box_mip.prop(self, 'tex_w')
+        box_mip.prop(self, 'tex_h')
         box_trk_lod = layout.box()
         box_trk_lod.label('Track details:')
         box_trk_lod_row = box_trk_lod.row()
