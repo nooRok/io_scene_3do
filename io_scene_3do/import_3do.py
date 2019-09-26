@@ -544,8 +544,8 @@ class Importer:
         return self._model.body.flavors
 
 
-def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
-             merge_faces, merge_uv_maps, merged_obj_name, separator, **_):
+def load(operator, context, filepath, lod_level, scale, tex_w, tex_h,
+         merge_faces, merge_uv_maps, merged_obj_name, separator, **_):
     """
 
     :param bpy.types.Operator operator:
