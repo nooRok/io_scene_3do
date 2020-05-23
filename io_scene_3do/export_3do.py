@@ -689,7 +689,7 @@ class Exporter:
                            if not f.parents and o != root_offset]
                 assert len(orphans) == 0, orphans
             for type_, files in self._files.items():
-                names = [n for n, _ in sorted(files.items(), key=lambda x: x[1])]
+                names = [n.upper() for n, _ in sorted(files.items(), key=lambda x: x[1])]
                 self.model.header.files.update({type_: names})
             self.model.sort(True)
             return True
