@@ -79,11 +79,11 @@ class Import3DO(bpy.types.Operator, ImportHelper):
                         description='Default texture height')
     # merge
     merge_faces = BoolProperty(name='Merge Faces', default=True)
-    merge_uv_maps = BoolProperty(name='Merge UV Maps', default=False)
     merged_obj_name = StringProperty(name='Name', default='',
                                      description="Not allowed to use a character that used for separator.")
     separator = StringProperty(name='Separator', default=':',
                                description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
+    merge_uv_maps = BoolProperty(name='Merge UV Maps', default=False)
 
     def execute(self, context):
         kw = self.as_keywords()
@@ -190,21 +190,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                                  s, 'f_log_lv', int(s.f_log_lv_)))
     f_log_lv = IntProperty(default=-1, options={'HIDDEN'})
 
-    def __enter__(self):
-        st_hdlr.setLevel(self.c_log_lv)
-        if self.f_log_lv >= 0:
-            hdlr = FileHandler(filename='{}.log'.format(self.filepath))
-            hdlr.setLevel(self.f_log_lv)
-            hdlr.setFormatter(Formatter('%(funcName)s: %(message)s'))
-            logger.addHandler(hdlr)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        handlers = [h for h in logger.handlers
-                    if isinstance(h, FileHandler)]
-        for h in handlers:
-            h.close()
-            logger.removeHandler(h)
-
     def execute(self, context):
         with self:
             try:
@@ -264,6 +249,21 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         box_log = layout.box()
         box_log.prop(self, 'c_log_lv_')
         box_log.prop(self, 'f_log_lv_')
+
+    def __enter__(self):
+        st_hdlr.setLevel(self.c_log_lv)
+        if self.f_log_lv >= 0:
+            hdlr = FileHandler(filename='{}.log'.format(self.filepath))
+            hdlr.setLevel(self.f_log_lv)
+            hdlr.setFormatter(Formatter('%(funcName)s: %(message)s'))
+            logger.addHandler(hdlr)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        handlers = [h for h in logger.handlers
+                    if isinstance(h, FileHandler)]
+        for h in handlers:
+            h.close()
+            logger.removeHandler(h)
 
 
 # handler
