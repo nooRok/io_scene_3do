@@ -505,18 +505,7 @@ class Importer:
                 assert isinstance(f, F01)
                 register_material(str(f.color))
 
-    def read_flavors(self, merge_uv_maps, merged_obj_name='', separator=':', lod_level=0b000):
-        """
-
-        :param bool merge_uv_maps:
-        :param str merged_obj_name:
-        :param str separator:
-        :param int lod_level: bit field
-        """
-        self._merge_uv_maps = merge_uv_maps
-        self._merged_obj_name = merged_obj_name
-        self._sep = separator
-        self._lod_lv = lod_level
+    def read_flavors(self):
         self._read_flavor(self._model.header.root_offset)
 
     def link_objects(self, context, scale=0):
@@ -580,10 +569,7 @@ def load(operator, context, filepath, lod_level, scale, tex_w, tex_h,
     importer.read_model()
     importer.register_textures(tex_w, tex_h)
     importer.register_materials()
-    importer.read_flavors(merge_uv_maps,
-                          merged_obj_name if merge_faces else '',
-                          separator,
-                          lod_level)
+    importer.read_flavors()
     importer.link_objects(context, scale)
     operator.report({'INFO'}, 'Model imported ({})'.format(filepath))
     return {'FINISHED'}
