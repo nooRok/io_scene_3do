@@ -37,6 +37,24 @@ def build_ref_id(ref_name, *elements, separator=':', delimiter='.'):
     return separator.join([ref_name, grp_id])
 
 
+def register_image(name, width, height, type_='UV_GRID'):
+    """
+
+    :param str name:
+    :param int width: width > 0
+    :param int height: height > 0
+    :param str type_:
+    :return:
+    :rtype: bpy.types.Image
+    """
+    assert width and height, [width, height]
+    if name in bpy.data.images:
+        return bpy.data.images[name]
+    img = bpy.data.images.new(name=name, width=width, height=height)
+    img.generated_type = type_  # ; img.source = 'FILE'
+    return img
+
+
 def register_texture(name, width=256, height=256):
     """
 
