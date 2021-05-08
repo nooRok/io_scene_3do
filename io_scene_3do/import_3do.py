@@ -571,7 +571,12 @@ def load(operator, context, filepath, lod_level, scale, tex_w, tex_h,
     :param str separator:
     :return:
     """
-    importer = Importer(filepath)
+    importer = Importer(filepath,
+                        merge_faces,
+                        merged_obj_name,
+                        separator,
+                        merge_uv_maps,
+                        lod_level)
     importer.read_model()
     importer.register_textures(tex_w, tex_h)
     importer.register_materials()
