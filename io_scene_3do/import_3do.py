@@ -55,24 +55,17 @@ def register_image(name, width, height, type_='UV_GRID'):
     return img
 
 
-def register_texture(name, width=256, height=256):
+def register_texture(name):
     """
 
     :param str name:
-    :param int width: width > 0
-    :param int height: height > 0
     :return:
     :rtype: bpy.types.ImageTexture
     """
     assert isinstance(name, str)
-    assert width and height, [width, height]
     if name in bpy.data.textures:
         return bpy.data.textures[name]
     tex = bpy.data.textures.new(name=name, type='IMAGE')
-    img = bpy.data.images.new(name=build_id(name, 'image'),
-                              width=width, height=height)
-    img.generated_type = 'UV_GRID'  # ; img.source = 'FILE'
-    tex.image = img
     tex.use_fake_user = True
     return tex
 
@@ -488,7 +481,9 @@ class Importer:
         if set(self._flavors.by_types(2)) - set(self._tex_names):  # __NIL__
             names.append(NIL)
         for name in names:
-            register_texture(name, w, h)
+            img = register_image(build_id(name, 'image'), w, h)
+            tex = register_texture(name)
+            tex.image = img
 
     def register_materials(self):
         for _, f in sorted(self._flavors.by_types(1, 2).items()):  # type: int, FaceFlavor
