@@ -278,7 +278,8 @@ def export_3do_menu_handler(self, context):
 
 
 def register():
-    bpy.utils.register_module(__name__)
+    bpy.utils.register_class(Import3DO)
+    bpy.utils.register_class(Export3DO)
     bpy.types.INFO_MT_file_import.append(import_3do_menu_handler)
     bpy.types.INFO_MT_file_export.append(export_3do_menu_handler)
     logger.addHandler(st_hdlr)
@@ -286,8 +287,9 @@ def register():
 
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
     bpy.types.INFO_MT_file_import.remove(import_3do_menu_handler)
     bpy.types.INFO_MT_file_export.remove(export_3do_menu_handler)
+    bpy.utils.unregister_class(Import3DO)
+    bpy.utils.unregister_class(Export3DO)
     logger.removeHandler(st_hdlr)
     print(__name__, 'unregistered')
