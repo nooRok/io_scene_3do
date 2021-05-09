@@ -535,7 +535,7 @@ def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
     """
     importer = Importer(filepath)
     importer.read_model()
-    importer.register_textures(tex_h, tex_w)
+    importer.register_textures(tex_w, tex_h)
     importer.register_materials()
     importer.read_flavors(merge_uv_maps,
                           merged_obj_name if merge_faces else '',
