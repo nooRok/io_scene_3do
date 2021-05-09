@@ -206,7 +206,16 @@ def set_uv_coordinates(uv_loops, vertex_uvs, size):
 
 
 class Importer:
-    def __init__(self, filepath, *args, **kwargs):
+    def __init__(self, filepath, merge_faces=False, obj_name='', separator=':', merge_uv_maps=False, lod_level=0b000):
+        """
+
+        :param str filepath:
+        :param bool merge_faces:
+        :param str obj_name:
+        :param str separator:
+        :param bool merge_uv_maps:
+        :param int lod_level:
+        """
         self.filepath = filepath
         self._sep = ''
         self._lod_lv = 0b000
