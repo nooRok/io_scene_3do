@@ -218,10 +218,10 @@ class Importer:
         """
         self.filepath = filepath
         self._merge_faces = merge_faces
-        self._separator = separator
-        self._lod_level = lod_level
-        self._merge_uv_maps = merge_uv_maps
         self._obj_name = obj_name
+        self._separator = separator
+        self._merge_uv_maps = merge_uv_maps
+        self._lod_level = lod_level
         self._model = Model(filepath)
         self._objects = {}  # type: dict[int, bpy.types.Object]  # {flavor offset: blender obj}
         self._dummies = []  # type: list[bpy.types.Object]
