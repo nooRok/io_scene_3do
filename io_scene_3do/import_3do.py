@@ -218,10 +218,10 @@ class Importer:
         """
         self.filepath = filepath
         self._merge_faces = merge_faces
-        self._sep = separator
-        self._lod_lv = lod_level
+        self._separator = separator
+        self._lod_level = lod_level
         self._merge_uv_maps = merge_uv_maps
-        self._merged_obj_name = obj_name
+        self._obj_name = obj_name
         self._model = Model(filepath)
         self._objects = {}  # type: dict[int, bpy.types.Object]  # {flavor offset: blender obj}
         self._dummies = []  # type: list[bpy.types.Object]
@@ -373,8 +373,8 @@ class Importer:
             if self._merge_faces:
                 obj = create_object(f_id, None, par_obj)
                 ref_name = build_ref_id(
-                    self._merged_obj_name, f.offset, 'F{:02}'.format(f.type),
-                    separator=self._sep)
+                    self._obj_name, f.offset, 'F{:02}'.format(f.type),
+                    separator=self._separator)
                 set_properties(obj, ref=ref_name,
                                **self._get_flavor_properties(offset))
             else:
@@ -402,11 +402,11 @@ class Importer:
                 if offset in self._lod_mgrs:
                     obj['F17'] = self._lod_mgrs[offset]
                     lod_offsets = []
-                    if self._lod_lv & 1 << 2:  # HI
+                    if self._lod_level & 1 << 2:  # HI
                         lod_offsets.extend(f.children[:4])
-                    if self._lod_lv & 1 << 1:  # MID
+                    if self._lod_level & 1 << 1:  # MID
                         lod_offsets.extend(f.children[4:6])
-                    if self._lod_lv & 1 << 0:  # LO
+                    if self._lod_level & 1 << 0:  # LO
                         lod_offsets.extend(f.children[6:])
                     for lod_o in lod_offsets:
                         self._read_flavor(lod_o, offset)
@@ -451,9 +451,9 @@ class Importer:
             vtc.extend(coords)
             vtx_idc.append(idc)
             vtx_uvs.append(uvs)
-        mesh = bpy.data.meshes.new(build_id(self._merged_obj_name, 'mesh'))
+        mesh = bpy.data.meshes.new(build_id(self._obj_name, 'mesh'))
         mesh.from_pydata(vtc, [], vtx_idc)
-        obj = bpy.data.objects.new(self._merged_obj_name, mesh)
+        obj = bpy.data.objects.new(self._obj_name, mesh)
         # Need a merged object creation before doing the following processes.
         for o, idc in zip(offsets, vtx_idc):
             name = self._build_flavor_id(o)
