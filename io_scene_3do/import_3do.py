@@ -217,6 +217,7 @@ class Importer:
         :param int lod_level:
         """
         self.filepath = filepath
+        self._merge_faces = merge_faces
         self._sep = ''
         self._lod_lv = 0b000
         self._merge_uv_maps = False
