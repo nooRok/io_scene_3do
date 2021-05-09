@@ -370,7 +370,7 @@ class Importer:
             group.objects.link(obj)
             self._dummies.append(obj)
         elif isinstance(f, FaceFlavor):  # 01, 02
-            if self._merged_obj_name:
+            if self._merge_faces:
                 obj = create_object(f_id, None, par_obj)
                 ref_name = build_ref_id(
                     self._merged_obj_name, f.offset, 'F{:02}'.format(f.type),
@@ -528,7 +528,7 @@ class Importer:
         for obj in (list(self._objects.values()) + self._dummies):
             context.scene.objects.link(obj)
             grp.objects.link(obj)
-        if self._merged_obj_name:
+        if self._merge_faces:
             mrg_obj = self._create_merged_object()
             mrg_obj['ref_source'] = True
             mrg_obj.scale = scale_vec
