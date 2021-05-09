@@ -111,8 +111,10 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         box_mrg = layout.box()
         box_mrg.label('Merge options:')
         box_mrg.prop(self, 'merge_faces')
-        box_mrg.prop(self, 'merged_obj_name')
-        box_mrg.prop(self, 'separator')
+        box_mrg_obj = box_mrg.box()
+        box_mrg_obj.prop(self, 'merged_obj_name')
+        box_mrg_obj.prop(self, 'separator')
+        box_mrg_obj.enabled = self.merge_faces
         box_mrg.prop(self, 'merge_uv_maps')
 
 
