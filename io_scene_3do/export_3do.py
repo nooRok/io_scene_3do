@@ -51,7 +51,7 @@ def get_reference_keys(obj, separator):
     :return: (obj name, vertex group name)
     :rtype: list[str]
     """
-    ref_val = obj.get('ref') or obj.get('reference')  # type: str
+    ref_val = obj.get('ref')  # type: str
     if ref_val:
         obj_name, *grp_name = ref_val.split(separator, 1)
         return [obj_name, ''.join(grp_name)]
