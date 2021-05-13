@@ -214,7 +214,7 @@ def get_face_texture_image(mesh, face_index):
     :rtype: bpy.types.Image
     """
     mtl = get_face_material(mesh, face_index)
-    t_slot = get_texture_slot(mtl)
+    t_slot = get_texture_slot(mtl) if mtl else None
     if t_slot:
         return t_slot.texture.image
 
@@ -227,7 +227,7 @@ def get_uv_layer(mesh, face_index):
     :rtype: bpy.types.MeshUVLoopLayer
     """
     mtl = get_face_material(mesh, face_index)
-    t_slot = get_texture_slot(mtl)
+    t_slot = get_texture_slot(mtl) if mtl else None
     if t_slot:
         assert t_slot.uv_layer  # str
         return mesh.uv_layers[t_slot.uv_layer]
