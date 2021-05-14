@@ -478,7 +478,7 @@ class Exporter:
         vf_os = [self._store_vertex_flavor(vtx, uv)
                  for vtx, uv in zip_longest(face_vtc, uv_vtc)]
         mtl = get_face_material(mesh, face_index)
-        color_idx = get_color_index(mtl.name if mtl else '', self._alt_color)
+        color_idx = get_color_index(mtl.name if mtl else self._alt_color)
         values1 = [color_idx, len(vf_os) - 1]
         if img:  # F02
             tex_flag = (obj.get('values1') or
