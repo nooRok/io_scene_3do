@@ -124,7 +124,7 @@ def get_filename(obj):
     return (obj.get('filename') or obj.name.split('.')[0])[:8]
 
 
-def get_color_index(material_name, alt_color_index=None):
+def get_color_index(material_name):
     """
     >>> get_color_index('10')
     10
@@ -132,7 +132,6 @@ def get_color_index(material_name, alt_color_index=None):
     11
 
     :param str|int material_name: -2...255
-    :param str|int alt_color_index: -2...255
     :return:
     :rtype: int
     """
@@ -145,8 +144,6 @@ def get_color_index(material_name, alt_color_index=None):
             return randrange(255)
         elif index == -1:
             return randrange(25, 176)
-        elif alt_color_index is not None:
-            return get_color_index(alt_color_index)
         raise ValueError('Color index must be between -2 and 255: {}'.format(index))
     except Exception:
         raise
