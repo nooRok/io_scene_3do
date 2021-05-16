@@ -101,10 +101,11 @@ def get_vertex_group_map(obj, mesh):
 
 def get_children(obj, key=None):
     """
-    Children are sorted by its names by default
 
     :param bpy.types.Object obj:
-    :param callable key: Function for sorting children
+    :param callable key:
+        Function for sorting children
+        (default=None: sorting by names)
     :return:
     :rtype: list[bpy.types.Object]
     """
