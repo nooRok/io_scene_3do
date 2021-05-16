@@ -328,11 +328,10 @@ class Exporter:
         :return:
         :rtype: mathutils.Matrix
         """
-        mx = getattr(obj, MX_SPACE[space]).copy()  # type: mathutils.Matrix
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
-            ref_mx = self._get_matrix(ref_obj, space)
-            mx.translation = (mx - ref_mx).to_translation()
+            return self._get_matrix(ref_obj, space)
+        mx = getattr(obj, MX_SPACE[space]).copy()  # type: mathutils.Matrix
         return mx
 
     def _get_file_index(self, key, filename):
@@ -408,7 +407,7 @@ class Exporter:
         :return:
         :rtype: mathutils.Vector
         """
-        return self._matrix * (matrix or mathutils.Matrix()) * vertex
+        return self._matrix * (matrix or mathutils.Matrix()) * vertex * self._scale
 
     def _gen_bsp_values(self, obj):
         """
@@ -623,7 +622,7 @@ class Exporter:
                         idx = self._get_file_index('3do', get_filename(obj))
                         values1[-1] = ~idx
                 else:  # if not values1:  # or some_flag
-                    tr_vec = self._matrix * obj.matrix_world.translation
+                    tr_vec = self._matrix * obj.matrix_world.translation * self._scale
                     loc = [int(v) for v in tr_vec]
                     eul = self._get_matrix(obj, self._f15_rot_space).to_euler()
                     eul.y *= -1  # y- front and y+ back in blender
