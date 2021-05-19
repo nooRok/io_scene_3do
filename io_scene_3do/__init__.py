@@ -127,6 +127,10 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                         description='3do model scale (1*n) '
                                     '0=use object property "scale"',
                         default=0)
+    origin = EnumProperty(items=[('world', 'World', ''),
+                                 ('object', 'Object', '')],
+                          name='Matrix origin',
+                          default='world')
     # color, texture
     alt_color = IntProperty(name='Alt color',
                             description=('Color for face with no material '
@@ -235,6 +239,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         box_mx.prop(self, 'scale')
         box_mx.prop(self, 'axis_forward')
         box_mx.prop(self, 'axis_up')
+        box_mx.prop(self, 'origin')
         box_mtl = layout.box()
         box_mtl.prop(self, 'alt_color')
         box_mtl.prop(self, 'tex_flag_')
