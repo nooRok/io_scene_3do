@@ -208,6 +208,8 @@ class Importer:
         """
         f = self._flavors[offset]
         if isinstance(f, F15):  # 3do
+            if f.index == 0:
+                return '*'  # for dindycar.3do/droadcar.3do F16 children separator
             return self._model.header.files['3do'][~f.index]
         key = 'mip' if isinstance(f, F04) else 'pmp'
         return self._model.header.files[key][f.index]
