@@ -701,7 +701,7 @@ class Exporter:
 
 def save(operator, context, filepath, apply_modifiers, separator,
          default_texture_flag, flip_uv, alt_color,
-         matrix, f15_rot_space, obj=None, **kwargs):
+         matrix, scale, f15_rot_space, obj=None, **kwargs):
     """
 
     :param bpy.types.Operator operator:
@@ -713,6 +713,7 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :param bool flip_uv:
     :param int alt_color: -2(random 0-255)|-1(random 32-175)|0-255
     :param mathutils.Matrix matrix: global matrix
+    :param int scale:
     :param str f15_rot_space: 'local'|'world'
     :param bpy.types.Object obj:
     :return:
