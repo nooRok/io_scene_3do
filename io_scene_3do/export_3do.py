@@ -636,8 +636,9 @@ class Exporter:
                     eul.y *= -1  # y- front and y+ back in blender
                     deg = [degrees(e) for e in reversed(eul)]  # [float] -180...180
                     rot = [to_papy_degree(d) for d in deg]
-                    idx = self._get_file_index('3do', get_filename(obj))
-                    values1.extend(loc + rot + [~idx])
+                    f15_name = get_filename(obj)
+                    idx = self._get_file_index('3do', f15_name)
+                    values1.extend(loc + rot + [0 if f15_name == '*' else ~idx])
             elif type_ == 18:
                 values1 = obj['values1'][:]
                 values1[-1] = self._get_file_index('pmp', get_filename(obj))
