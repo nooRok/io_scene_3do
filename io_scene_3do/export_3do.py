@@ -277,7 +277,7 @@ def has_area(o, a, b, ndigits=None):
 class Exporter:
     def __init__(self, apply_modifiers, separator,
                  texture_flag, flip_uv, alt_color,
-                 matrix, f15_rot_space, *args, **kwargs):
+                 matrix, scale, f15_rot_space, *args, **kwargs):
         """
 
         :param bool apply_modifiers:
@@ -289,6 +289,7 @@ class Exporter:
             Alternate color index for F01|F02 with no color index or invalid color index
             (-2:random 0-255|-1:random 32-175|0-255)
         :param mathutils.Matrix matrix: Global matrix
+        :param int scale:
         :param str f15_rot_space: 'local'|'world'|'basis'|'parent'
         """
         self.model = Model()
@@ -301,6 +302,7 @@ class Exporter:
         self._alt_color = alt_color
         # matrix
         self._matrix = matrix.to_4x4()
+        self._scale = scale
         self._f15_rot_space = f15_rot_space
         # maps
         self._files = {'mip': {}, 'pmp': {}, '3do': {}}
@@ -720,7 +722,7 @@ def save(operator, context, filepath, apply_modifiers, separator,
     """
     exporter = Exporter(apply_modifiers, separator,
                         default_texture_flag, flip_uv, alt_color,
-                        matrix, f15_rot_space, **kwargs)
+                        matrix, scale, f15_rot_space, **kwargs)
     if exporter.build_model(obj or context.active_object):
         with open(filepath, 'wb') as f:
             f.write(exporter.model.to_bytes())
