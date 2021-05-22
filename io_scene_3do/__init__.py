@@ -33,26 +33,26 @@ if 'blender modules':
     from . import (export_3do,
                    import_3do)
 
-import os
-from logging import (getLogger,
-                     Formatter,
-                     StreamHandler,
-                     DEBUG,
-                     FileHandler)
+    OrientationHelper = orientation_helper_factory('OrientationHelper')
 
-logger = getLogger(__name__)
-logger.setLevel(DEBUG)
-st_hdlr = StreamHandler()
+if 'python modules':
+    import os
+    from logging import (getLogger,
+                         Formatter,
+                         StreamHandler,
+                         DEBUG,
+                         FileHandler)
 
-OrientationHelper = orientation_helper_factory('OrientationHelper')
-
-log_lvs = [('50', 'CRITICAL', ''),
-           ('40', 'ERROR', ''),
-           ('30', 'WARNING', ''),
-           ('20', 'INFO', ''),
-           ('10', 'DEBUG', ''),
-           ('0', 'NOTSET', ''),
-           ('-1', 'DISABLE', '')]
+    logger = getLogger(__name__)
+    logger.setLevel(DEBUG)
+    st_hdlr = StreamHandler()
+    log_lvs = [('50', 'CRITICAL', ''),
+               ('40', 'ERROR', ''),
+               ('30', 'WARNING', ''),
+               ('20', 'INFO', ''),
+               ('10', 'DEBUG', ''),
+               ('0', 'NOTSET', ''),
+               ('-1', 'DISABLE', '')]
 
 
 # importer/exporter
