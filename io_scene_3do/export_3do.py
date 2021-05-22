@@ -623,6 +623,7 @@ class Exporter:
             elif type_ == 15:
                 values1 = obj.get('values1') or []
                 if values1:
+                    assert len(values1) == 7
                     if values1[-1] == 0:
                         pass
                     else:
