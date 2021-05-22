@@ -407,7 +407,14 @@ class Exporter:
         :return:
         :rtype: mathutils.Vector
         """
-        return self._matrix * (matrix or mathutils.Matrix()) * vertex * self._scale
+        tr1, rot1, sc1 = matrix.decompose()  # type: mathutils.Vector, mathutils.Quaternion, mathutils.Vector
+        tr2, rot2, sc2 = self._matrix.decompose()  # type: mathutils.Vector, mathutils.Quaternion, mathutils.Vector
+        tr = mathutils.Matrix.Translation(tr1 - tr2)  # mathutils.Matrix.Translation(tr2 - tr1)
+        rot = (rot1 * rot2).to_matrix().to_4x4()
+        sc = mathutils.Matrix()
+        sc[0][0], sc[1][1], sc[2][2] = sc1
+        mx = rot * tr * sc
+        return mx * vertex * self._scale
 
     def _gen_bsp_values(self, obj):
         """
