@@ -630,7 +630,7 @@ class Exporter:
                         idx = self._get_file_index('3do', get_filename(obj))
                         values1[-1] = ~idx
                 else:  # if not values1:  # or some_flag
-                    tr_vec = self._matrix * obj.matrix_world.translation * self._scale
+                    tr_vec = self._matrix.to_quaternion().to_matrix() * self._get_matrix(obj).translation * self._scale
                     loc = [int(v) for v in tr_vec]
                     eul = self._get_matrix(obj, self._f15_rot_space).to_euler()
                     eul.y *= -1  # y- front and y+ back in blender
