@@ -91,7 +91,7 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         kw['merged_obj_name'] = (kw['merged_obj_name'] or
                                  os.path.basename(self.filepath))
         if kw['separator'] in kw['merged_obj_name']:
-            self.report({'ERROR'}, "Not allowed to use a character that used for separator..")
+            self.report({'ERROR'}, "Not allowed to use a character that used for a separator.")
             return {'CANCELLED'}
         return import_3do.load(self, context, **kw)
 
@@ -160,7 +160,8 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
     apply_modifiers = BoolProperty(name='Apply Object Modifiers',
                                    default=True)
     separator = StringProperty(name='Separator', default=':',
-                               description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
+                               description='A character for to separate a value of object property "ref" '
+                                           'to the referenced object name and its vertex group name.')
     # ex obj
     f15_rot_space = EnumProperty(items=[('basis', 'Basis', 'Local Space'),
                                         ('parent', 'Parent', 'Local Space'),
@@ -171,7 +172,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                                  default='basis')
     #
     export_all = BoolProperty(name='Export All Selected Objects',
-                              description='Object name is used as filename. '
+                              description='Filenames are taken from each selected object names. '
                                           'Input box value is ignored.',
                               default=False)
     # logging
