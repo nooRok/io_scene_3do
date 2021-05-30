@@ -491,7 +491,7 @@ class Importer:
         if set(self._flavors.by_types(2)) - set(self._tex_names):  # __NIL__
             names.append(NIL)
         for name in names:
-            img = register_image(build_id(name, 'image'), w, h)
+            img = register_image(name, w, h)
             tex = register_texture(name)
             tex.image = img
 
