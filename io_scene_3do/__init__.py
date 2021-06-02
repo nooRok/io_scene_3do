@@ -179,9 +179,9 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
     c_log_lv_ = EnumProperty(items=log_lvs[:-1],
                              name='Console logging level',
                              description='Logging threshold level for console',
-                             default='30',
+                             default='20',
                              update=lambda s, c: setattr(s, 'c_log_lv', int(s.c_log_lv_)))
-    c_log_lv = IntProperty(default=30, options={'HIDDEN'})
+    c_log_lv = IntProperty(default=20, options={'HIDDEN'})
     f_log_lv_ = EnumProperty(items=log_lvs,
                              name='File logging level',
                              description='Logging threshold level for logfile',
