@@ -344,7 +344,7 @@ class Exporter:
         :rtype: int
         """
         files = self._files[key]
-        return files.setdefault(filename, len(files))
+        return files.setdefault(filename.upper(), len(files))
 
     def _get_child_offsets(self, obj, order=None):
         """
