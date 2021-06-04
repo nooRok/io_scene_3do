@@ -423,9 +423,12 @@ class Exporter:
         :param bpy.types.Object obj:
         """
         mesh = self._get_mesh(obj)
+        order = -1 if int(obj.get('bsp') or 0) < 0 else 1
+        if order == -1:
+            logger.info('bsp inverted: %s', obj)
         for f in self._get_faces(obj):
             vtc = [self._get_scaled_vertex(v, self._get_matrix(obj))
-                   for v in gen_face_vertices(mesh, f.index)]
+                   for v in gen_face_vertices(mesh, f.index)][::order]
             points = zip(vtc, vtc[1:], vtc[2:])  # [[0,1,2], [1,2,3]...]
             coords = next(pts for pts in points if has_area(*pts, ndigits=4))
             yield BspValues.from_coordinates(*coords)
