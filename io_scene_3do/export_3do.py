@@ -543,12 +543,12 @@ class Exporter:
         children = []
         if is_face_object(self._get_reference_object(obj) or obj):
             os_ = self._store_face_flavors(obj)
-            bsp = int(obj.get('bsp') or 0)
-            children.extend([] if bsp else os_)
-            if bsp:
-                for o, v1 in zip(os_, self._gen_bsp_values(obj)):
-                    bsp_o = self._store_flavor(5, v1, [o], obj)
-                    children.append(bsp_o)
+            if obj.get('bsp'):
+                bsp_os = [self._store_flavor(5, v1, [o], obj)
+                          for o, v1 in zip(os_, self._gen_bsp_values(obj))]
+                children.extend(bsp_os)
+            else:
+                children.extend(os_)
         if children or obj.children:
             children.extend(self._get_child_offsets(obj))  # order: [faces, object children]
             self._store_flavor(11, [len(children)], children, obj)
