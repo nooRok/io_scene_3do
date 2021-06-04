@@ -522,7 +522,7 @@ class Exporter:
         mesh = self._get_mesh(obj)
         faces = self._get_faces(obj)
         if mesh and faces:  # face vertices define BSP normal
-            values1 = next(self._gen_bsp_values(obj))  # normal of faces[1]
+            values1 = next(self._gen_bsp_values(obj))  # normal of faces[0]
             if len(values2) == BSP_LENGTH[type_] - 1:  # draw itself
                 f_os = self._store_face_flavors(obj)
                 assert len(f_os) > 0
