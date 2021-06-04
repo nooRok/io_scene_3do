@@ -669,10 +669,11 @@ class Exporter:
         for c_obj in get_children(obj):
             self._build_flavor(c_obj, ignore_property)
         type_ = obj.get('F')
+        assert type_ is None or isinstance(type_, int), obj
         if type_ is None or type_ == -1 or ignore_property:
             self._build_flavor_from_data(obj)
         else:
-            self._build_flavor_from_type(obj, int(type_))
+            self._build_flavor_from_type(obj, type_)
 
     def build_model(self, root_object):
         """
