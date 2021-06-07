@@ -371,7 +371,7 @@ class Exporter:
             if obj in self._meshes:
                 return self._meshes[obj]
             mesh = obj.to_mesh(bpy.context.scene, True, 'RENDER')
-            logger.info('mod Ob(%s): [Me(%s) -> Me(%s)]',
+            logger.debug('mod: Ob["%s"].Me["%s"] -> Me["%s"]',
                         obj.name, obj.data.name, mesh.name)
             return self._meshes.setdefault(obj, mesh)
         return obj.data
@@ -387,8 +387,8 @@ class Exporter:
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
             name = get_reference_keys(obj, self._separator)[1]  # vtx group name
-            logger.info('grp Ob(%s): [Ob(%s).Gr(%s): Me(%s)]',
-                        obj.name, ref_obj.name, name, mesh.name)
+            logger.debug('ref: Ob["%s"] -> Ob["%s"].Me["%s"].Gr["%s"]',
+                        obj.name, ref_obj.name, mesh.name, name)
             try:
                 vtx_group = get_vertex_group_map(ref_obj, mesh)[name]
                 return [mesh.polygons[i] for i in vtx_group]
@@ -425,7 +425,7 @@ class Exporter:
         mesh = self._get_mesh(obj)
         order = -1 if int(obj.get('bsp') or 0) < 0 else 1
         if order == -1:
-            logger.info('bsp inverted: %s', obj)
+            logger.debug('bsp inv: Ob["%s"]', obj)
         for f in self._get_faces(obj):
             vtc = [self._get_scaled_vertex(v, self._get_matrix(obj))
                    for v in gen_face_vertices(mesh, f.index)][::order]
@@ -698,13 +698,13 @@ class Exporter:
             self.model.sort(True)
             return True
         except Exception as err:
-            logger.exception('')
+            logger.exception(err)
             raise
         finally:
             logger.debug(self._offsets)
             logger.debug(self._meshes)
             for mesh in self._meshes.values():
-                logger.info('rem %s', mesh)
+                logger.info('rem: Me["%s"]', mesh)
                 bpy.data.meshes.remove(mesh)
             self._meshes.clear()
             _Cache.clear()

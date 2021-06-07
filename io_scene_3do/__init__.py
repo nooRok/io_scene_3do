@@ -90,6 +90,7 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         kw['lod_level'] = (self.lod_hi << 2 | self.lod_mid << 1 | self.lod_lo)
         kw['merged_obj_name'] = (kw['merged_obj_name'] or
                                  os.path.basename(self.filepath))
+        logger.info(kw)
         if kw['separator'] in kw['merged_obj_name']:
             self.report({'ERROR'}, "Not allowed to use a character that used for a separator.")
             return {'CANCELLED'}
@@ -216,7 +217,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                         _, ext = os.path.splitext(basename)
                         filename = '{}{}'.format(obj.name.split('.')[0], ext)
                         kw['filepath'] = os.path.join(dirname, filename)
-                    logger.info(kw['filepath'])
+                    logger.info(kw)
                     export_3do.save(self, context, **kw)
                 logger.info('Finished')
                 self.report({'INFO'}, 'Finished: ({})'.format(self.filepath))
