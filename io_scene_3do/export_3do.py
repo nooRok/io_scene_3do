@@ -124,7 +124,7 @@ def get_filename(obj):
     return (obj.get('filename') or obj.name.split('.')[0])[:8]
 
 
-def get_color_index(material_name, alt_color_index=None):
+def get_color_index(material_name):
     """
     >>> get_color_index('10')
     10
@@ -132,7 +132,6 @@ def get_color_index(material_name, alt_color_index=None):
     11
 
     :param str|int material_name: -2...255
-    :param str|int alt_color_index: -2...255
     :return:
     :rtype: int
     """
@@ -145,8 +144,6 @@ def get_color_index(material_name, alt_color_index=None):
             return randrange(255)
         elif index == -1:
             return randrange(25, 176)
-        elif alt_color_index is not None:
-            return get_color_index(alt_color_index)
         raise ValueError('Color index must be between -2 and 255: {}'.format(index))
     except Exception:
         raise
@@ -214,7 +211,7 @@ def get_face_texture_image(mesh, face_index):
     :rtype: bpy.types.Image
     """
     mtl = get_face_material(mesh, face_index)
-    t_slot = get_texture_slot(mtl)
+    t_slot = get_texture_slot(mtl) if mtl else None
     if t_slot:
         return t_slot.texture.image
 
@@ -227,7 +224,7 @@ def get_uv_layer(mesh, face_index):
     :rtype: bpy.types.MeshUVLoopLayer
     """
     mtl = get_face_material(mesh, face_index)
-    t_slot = get_texture_slot(mtl)
+    t_slot = get_texture_slot(mtl) if mtl else None
     if t_slot:
         assert t_slot.uv_layer  # str
         return mesh.uv_layers[t_slot.uv_layer]
@@ -478,7 +475,7 @@ class Exporter:
         vf_os = [self._store_vertex_flavor(vtx, uv)
                  for vtx, uv in zip_longest(face_vtc, uv_vtc)]
         mtl = get_face_material(mesh, face_index)
-        color_idx = get_color_index(mtl.name if mtl else '', self._alt_color)
+        color_idx = get_color_index(mtl.name if mtl else self._alt_color)
         values1 = [color_idx, len(vf_os) - 1]
         if img:  # F02
             tex_flag = (obj.get('values1') or
