@@ -91,17 +91,17 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         kw['merged_obj_name'] = (kw['merged_obj_name'] or
                                  os.path.basename(self.filepath))
         if kw['separator'] in kw['merged_obj_name']:
-            self.report({'ERROR'}, "Not allowed to use a character that used for separator..")
+            self.report({'ERROR'}, "Not allowed to use a character that used for a separator.")
             return {'CANCELLED'}
         return import_3do.load(self, context, **kw)
 
     def draw(self, context):
         layout = self.layout
         layout.prop(self, 'scale')
-        box_mip_size = layout.box()
-        box_mip_size.label('Default .mip size:')
-        box_mip_size.prop(self, 'tex_w')
-        box_mip_size.prop(self, 'tex_h')
+        box_mip = layout.box()
+        box_mip.label('Default .mip size:')
+        box_mip.prop(self, 'tex_w')
+        box_mip.prop(self, 'tex_h')
         box_trk_lod = layout.box()
         box_trk_lod.label('Track details:')
         box_trk_lod_row = box_trk_lod.row()
@@ -111,8 +111,10 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         box_mrg = layout.box()
         box_mrg.label('Merge options:')
         box_mrg.prop(self, 'merge_faces')
-        box_mrg.prop(self, 'merged_obj_name')
-        box_mrg.prop(self, 'separator')
+        box_mrg_obj = box_mrg.box()
+        box_mrg_obj.prop(self, 'merged_obj_name')
+        box_mrg_obj.prop(self, 'separator')
+        box_mrg_obj.enabled = self.merge_faces
         box_mrg.prop(self, 'merge_uv_maps')
 
 
@@ -158,7 +160,8 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
     apply_modifiers = BoolProperty(name='Apply Object Modifiers',
                                    default=True)
     separator = StringProperty(name='Separator', default=':',
-                               description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
+                               description='A character for to separate a value of object property "ref" '
+                                           'to the referenced object name and its vertex group name.')
     # ex obj
     f15_rot_space = EnumProperty(items=[('basis', 'Basis', 'Local Space'),
                                         ('parent', 'Parent', 'Local Space'),
@@ -169,7 +172,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                                  default='basis')
     #
     export_all = BoolProperty(name='Export All Selected Objects',
-                              description='Object name is used as filename. '
+                              description='Filenames are taken from each selected object names. '
                                           'Input box value is ignored.',
                               default=False)
     # logging
@@ -242,23 +245,22 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
     def draw(self, context):
         layout = self.layout
         box_mx = layout.box()
-        box_mx.label('Global Matrix:')
+        box_mx.label('Matrix:')
         box_mx.prop(self, 'scale')
         box_mx.prop(self, 'axis_forward')
         box_mx.prop(self, 'axis_up')
         box_mx.prop(self, 'origin')
+        box_mx.prop(self, 'f15_rot_space')
         box_mtl = layout.box()
+        box_mtl.label('Material:')
         box_mtl.prop(self, 'alt_color')
         box_mtl.prop(self, 'tex_flag_')
         box_mtl.prop(self, 'flip_uv')
         box = layout.box()
+        box.prop(self, 'separator')
         box.prop(self, 'apply_modifiers')
         if len(context.selected_objects) > 1:
             box.prop(self, 'export_all')
-        box.prop(self, 'separator')
-        box_f15_mx = layout.box()
-        box_f15_mx.label('F15 Matrix:')
-        box_f15_mx.prop(self, 'f15_rot_space')
         box_log = layout.box()
         box_log.prop(self, 'c_log_lv_')
         box_log.prop(self, 'f_log_lv_')
