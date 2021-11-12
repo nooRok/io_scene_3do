@@ -120,13 +120,12 @@ def get_material(material_id):
     """
     Find non-zero-filled -> zero-filled -> new non-zero-filled
 
-    :param material_id:
+    :param str material_id:
     :return:
     :rtype: bpy.types.Material
     """
-    mtl_id = str(material_id)
-    return (bpy.data.materials.get(mtl_id) or
-            bpy.data.materials[mtl_id.zfill(3)])
+    return (bpy.data.materials.get(material_id) or
+            bpy.data.materials[material_id.zfill(3)])
 
 
 def get_material_index(material, mesh, append=False):
@@ -145,17 +144,16 @@ def get_material_index(material, mesh, append=False):
     return mtl_idx
 
 
-def get_material_texture(material_id, index=0):
+def get_material_texture(material, index=0):
     """
 
-    :param str material_id:
+    :param bpy.types.Material material:
     :param int index:
     :return:
-    :rtype: bpy.types.Texture|bpy.types.ImageTexture
+    :rtype: bpy.types.ImageTexture
     """
-    mtl = get_material(material_id)
-    tex_slot = mtl.texture_slots[index]
-    return tex_slot.texture  # bpy.data.textures[mip_name]
+    tex_slot = material.texture_slots[index]
+    return tex_slot.texture
 
 
 def get_uv_map(mesh, name):
@@ -169,6 +167,19 @@ def get_uv_map(mesh, name):
     uv_map = (mesh.uv_textures.get(name) or
               mesh.uv_textures.new(name))
     return uv_map
+
+
+def get_uv_loops(mesh, uv_map_name, face_index=0):
+    """
+
+    :param bpy.types.Mesh mesh:
+    :param str uv_map_name:
+    :param int face_index:
+    :return:
+    :rtype: list[bpy.types.MeshUVLoop]
+    """
+    idc = mesh.polygons[face_index].loop_indices
+    return [mesh.uv_layers[uv_map_name].data[i] for i in idc]
 
 
 def set_uv_coordinates(uv_loops, vertex_uvs, size):
@@ -281,27 +292,23 @@ class Importer:
             mip_name = self._tex_names.get(f.offset, NIL)
             mtl_name = build_id(f.color, mip_name)
             return get_material(mtl_name)
-        return get_material(f.color)
+        return get_material(str(f.color))
 
-    def _set_uv_coordinates(self, mesh, material, vertex_indices, vertex_uvs, face_index=0):
+    def _set_uv_map(self, mesh, material, face_index=0):
         """
 
         :param bpy.types.Mesh mesh:
         :param bpy.types.Material material:
-        :param list[int] vertex_indices:
-        :param list[list[int]] vertex_uvs:
         :param int face_index:
+        :return:
+        :rtype: bpy.types.MeshTexturePolyLayer
         """
-        tex_slot = material.texture_slots[0]
-        img = tex_slot.texture.image
+        img = get_material_texture(material).image
         img_name = 'texture' if self.merge_uv_maps else img.name
         uv_map = get_uv_map(mesh, build_id(img_name, 'uv'))
         uv_map.data[face_index].image = img
-        tex_slot.uv_layer = uv_map.name
-        uv_loops = [mesh.uv_layers[uv_map.name].data[i]
-                    for i in vertex_indices]
-        size = get_material_texture(material.name).image.size
-        set_uv_coordinates(uv_loops, vertex_uvs, size)
+        material.texture_slots[0].uv_layer = uv_map.name
+        return uv_map
 
     def _create_object_data(self, offset):
         """
@@ -356,7 +363,10 @@ class Importer:
                 obj = create_object(f_id, mesh, par_obj)
                 mtl = self._get_face_material(offset)
                 if isinstance(f, F02):
-                    self._set_uv_coordinates(mesh, mtl, idc, uvs)
+                    uv_map = self._set_uv_map(mesh, mtl)
+                    uv_loops = get_uv_loops(mesh, uv_map.name)
+                    img = get_material_texture(mtl).image
+                    set_uv_coordinates(uv_loops, uvs, img.size)
                 obj.active_material = mtl
                 set_properties(obj, **self._get_flavor_properties(offset))
             self._objects[f.offset] = obj
@@ -430,7 +440,10 @@ class Importer:
         for o, idc, uvs, poly in zip(offsets, vtx_idc, vtx_uvs, mesh.polygons):
             mtl = self._get_face_material(o)
             if isinstance(self._flavors[o], F02):
-                self._set_uv_coordinates(mesh, mtl, idc, uvs, poly.index)
+                uv_map = self._set_uv_map(mesh, mtl, poly.index)
+                uv_loops = get_uv_loops(mesh, uv_map.name, poly.index)
+                img = get_material_texture(mtl).image
+                set_uv_coordinates(uv_loops, uvs, img.size)
             poly.material_index = get_material_index(mtl, mesh, True)
         return obj
 
