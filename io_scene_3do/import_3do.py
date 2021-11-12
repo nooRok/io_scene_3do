@@ -206,12 +206,22 @@ def set_uv_coordinates(uv_loops, vertex_uvs, size):
 
 
 class Importer:
-    def __init__(self, filepath, *args, **kwargs):
+    def __init__(self, filepath, merge_faces=False, obj_name='', separator=':', merge_uv_maps=False, lod_level=0b000):
+        """
+
+        :param str filepath:
+        :param bool merge_faces:
+        :param str obj_name:
+        :param str separator:
+        :param bool merge_uv_maps:
+        :param int lod_level:
+        """
         self.filepath = filepath
-        self._sep = ''
-        self._lod_lv = 0b000
-        self._merge_uv_maps = False
-        self._merged_obj_name = ''  # also used as flag "merge_faces"
+        self._merge_faces = merge_faces
+        self._sep = separator
+        self._lod_lv = lod_level
+        self._merge_uv_maps = merge_uv_maps
+        self._merged_obj_name = obj_name
         self._model = Model(filepath)
         self._objects = {}  # type: dict[int, bpy.types.Object]  # {flavor offset: blender obj}
         self._dummies = []  # type: list[bpy.types.Object]
@@ -495,18 +505,7 @@ class Importer:
                 assert isinstance(f, F01)
                 register_material(str(f.color))
 
-    def read_flavors(self, merge_uv_maps, merged_obj_name='', separator=':', lod_level=0b000):
-        """
-
-        :param bool merge_uv_maps:
-        :param str merged_obj_name:
-        :param str separator:
-        :param int lod_level: bit field
-        """
-        self._merge_uv_maps = merge_uv_maps
-        self._merged_obj_name = merged_obj_name
-        self._sep = separator
-        self._lod_lv = lod_level
+    def read_flavors(self):
         self._read_flavor(self._model.header.root_offset)
 
     def link_objects(self, context, scale=0):
@@ -544,8 +543,8 @@ class Importer:
         return self._model.body.flavors
 
 
-def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
-             merge_faces, merge_uv_maps, merged_obj_name, separator, **_):
+def load(operator, context, filepath, lod_level, scale, tex_w, tex_h,
+         merge_faces, merge_uv_maps, merged_obj_name, separator, **_):
     """
 
     :param bpy.types.Operator operator:
@@ -561,14 +560,16 @@ def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
     :param str separator:
     :return:
     """
-    importer = Importer(filepath)
+    importer = Importer(filepath,
+                        merge_faces,
+                        merged_obj_name,
+                        separator,
+                        merge_uv_maps,
+                        lod_level)
     importer.read_model()
     importer.register_textures(tex_w, tex_h)
     importer.register_materials()
-    importer.read_flavors(merge_uv_maps,
-                          merged_obj_name if merge_faces else '',
-                          separator,
-                          lod_level)
+    importer.read_flavors()
     importer.link_objects(context, scale)
     operator.report({'INFO'}, 'Model imported ({})'.format(filepath))
     return {'FINISHED'}

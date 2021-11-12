@@ -93,7 +93,7 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         if kw['separator'] in kw['merged_obj_name']:
             self.report({'ERROR'}, "Not allowed to use a character that used for separator..")
             return {'CANCELLED'}
-        return import_3do.load_3do(self, context, **kw)
+        return import_3do.load(self, context, **kw)
 
     def draw(self, context):
         layout = self.layout
