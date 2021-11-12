@@ -277,7 +277,7 @@ def has_area(o, a, b, ndigits=None):
 class Exporter:
     def __init__(self, apply_modifiers, separator,
                  texture_flag, flip_uv, alt_color,
-                 matrix, f15_rot_space, *args, **kwargs):
+                 matrix, scale, f15_rot_space, *args, **kwargs):
         """
 
         :param bool apply_modifiers:
@@ -289,6 +289,7 @@ class Exporter:
             Alternate color index for F01|F02 with no color index or invalid color index
             (-2:random 0-255|-1:random 32-175|0-255)
         :param mathutils.Matrix matrix: Global matrix
+        :param int scale:
         :param str f15_rot_space: 'local'|'world'|'basis'|'parent'
         """
         self.model = Model()
@@ -301,6 +302,7 @@ class Exporter:
         self._alt_color = alt_color
         # matrix
         self._matrix = matrix.to_4x4()
+        self._scale = scale
         self._f15_rot_space = f15_rot_space
         # maps
         self._files = {'mip': {}, 'pmp': {}, '3do': {}}
@@ -326,11 +328,10 @@ class Exporter:
         :return:
         :rtype: mathutils.Matrix
         """
-        mx = getattr(obj, MX_SPACE[space]).copy()  # type: mathutils.Matrix
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
-            ref_mx = self._get_matrix(ref_obj, space)
-            mx.translation = (mx - ref_mx).to_translation()
+            return self._get_matrix(ref_obj, space)
+        mx = getattr(obj, MX_SPACE[space]).copy()  # type: mathutils.Matrix
         return mx
 
     def _get_file_index(self, key, filename):
@@ -406,7 +407,14 @@ class Exporter:
         :return:
         :rtype: mathutils.Vector
         """
-        return self._matrix * (matrix or mathutils.Matrix()) * vertex
+        tr1, rot1, sc1 = matrix.decompose()  # type: mathutils.Vector, mathutils.Quaternion, mathutils.Vector
+        tr2, rot2, sc2 = self._matrix.decompose()  # type: mathutils.Vector, mathutils.Quaternion, mathutils.Vector
+        tr = mathutils.Matrix.Translation(tr1 - tr2)  # mathutils.Matrix.Translation(tr2 - tr1)
+        rot = (rot1 * rot2).to_matrix().to_4x4()
+        sc = mathutils.Matrix()
+        sc[0][0], sc[1][1], sc[2][2] = sc1
+        mx = rot * tr * sc
+        return mx * vertex * self._scale
 
     def _gen_bsp_values(self, obj):
         """
@@ -621,7 +629,7 @@ class Exporter:
                         idx = self._get_file_index('3do', get_filename(obj))
                         values1[-1] = ~idx
                 else:  # if not values1:  # or some_flag
-                    tr_vec = self._matrix * obj.matrix_world.translation
+                    tr_vec = self._matrix * obj.matrix_world.translation * self._scale
                     loc = [int(v) for v in tr_vec]
                     eul = self._get_matrix(obj, self._f15_rot_space).to_euler()
                     eul.y *= -1  # y- front and y+ back in blender
@@ -701,7 +709,7 @@ class Exporter:
 
 def save(operator, context, filepath, apply_modifiers, separator,
          default_texture_flag, flip_uv, alt_color,
-         matrix, f15_rot_space, obj=None, **kwargs):
+         matrix, scale, f15_rot_space, obj=None, **kwargs):
     """
 
     :param bpy.types.Operator operator:
@@ -713,13 +721,14 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :param bool flip_uv:
     :param int alt_color: -2(random 0-255)|-1(random 32-175)|0-255
     :param mathutils.Matrix matrix: global matrix
+    :param int scale:
     :param str f15_rot_space: 'local'|'world'
     :param bpy.types.Object obj:
     :return:
     """
     exporter = Exporter(apply_modifiers, separator,
                         default_texture_flag, flip_uv, alt_color,
-                        matrix, f15_rot_space, **kwargs)
+                        matrix, scale, f15_rot_space, **kwargs)
     if exporter.build_model(obj or context.active_object):
         with open(filepath, 'wb') as f:
             f.write(exporter.model.to_bytes())

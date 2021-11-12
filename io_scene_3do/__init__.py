@@ -127,6 +127,10 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                         description='3do model scale (1*n) '
                                     '0=use object property "scale"',
                         default=0)
+    origin = EnumProperty(items=[('world', 'World', ''),
+                                 ('object', 'Object', '')],
+                          name='Matrix origin',
+                          default='world')
     # color, texture
     alt_color = IntProperty(name='Alt color',
                             description=('Color for face with no material '
@@ -209,14 +213,21 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                 objs = (context.selected_objects if all_ else
                         [context.active_object])
                 for obj in objs:  # type: bpy.types.Object
+                    kw['scale'] = self.scale or int(obj.get('scale', 1))
+                    origin = (obj.get('origin') or self.origin).lower()  # type: str  # 'world'|'object'
+                    if origin == 'world':
+                        kw['matrix'] = rot_mx  # mathutils.Matrix()
+                    else:  # object
+                        assert self.origin == 'object'
+                        obj_mx = context.active_object.matrix_world  # type: mathutils.Matrix
+                        tr, rot, sc = obj_mx.decompose()  # type: mathutils.Vector, mathutils.Quaternion, mathutils.Vector
+                        kw['matrix'] = mathutils.Matrix.Translation(tr) * rot_mx
                     if all_:
                         dirname, basename = os.path.split(self.filepath)
                         _, ext = os.path.splitext(basename)
                         filename = '{}{}'.format(obj.name.split('.')[0], ext)
                         kw['filepath'] = os.path.join(dirname, filename)
                         kw['obj'] = obj
-                    scl_mx = mathutils.Matrix.Scale(self.scale or obj.get('scale', 1), 4)
-                    kw['matrix'] = scl_mx * rot_mx
                     logger.info(kw['filepath'])
                     export_3do.save(self, context, **kw)
                 logger.info('Finished')
@@ -235,6 +246,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
         box_mx.prop(self, 'scale')
         box_mx.prop(self, 'axis_forward')
         box_mx.prop(self, 'axis_up')
+        box_mx.prop(self, 'origin')
         box_mtl = layout.box()
         box_mtl.prop(self, 'alt_color')
         box_mtl.prop(self, 'tex_flag_')
