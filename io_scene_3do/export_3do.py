@@ -51,7 +51,7 @@ def get_reference_keys(obj, separator):
     :return: (obj name, vertex group name)
     :rtype: list[str]
     """
-    ref_val = obj.get('ref') or obj.get('reference')  # type: str
+    ref_val = obj.get('ref', '').strip()  # type: str
     if ref_val:
         obj_name, *grp_name = ref_val.split(separator, 1)
         return [obj_name, ''.join(grp_name)]
@@ -101,10 +101,11 @@ def get_vertex_group_map(obj, mesh):
 
 def get_children(obj, key=None):
     """
-    Children are sorted by its names by default
 
     :param bpy.types.Object obj:
-    :param callable key: Function for sorting children
+    :param callable key:
+        Function for sorting children
+        (default=None: sorting by names)
     :return:
     :rtype: list[bpy.types.Object]
     """
@@ -295,7 +296,7 @@ class Exporter:
         self.model = Model()
         # mesh
         self._apply_modifiers = apply_modifiers
-        self._sep = separator
+        self._separator = separator
         # material
         self._tex_flag = texture_flag
         self._flip_uv = flip_uv
@@ -318,7 +319,7 @@ class Exporter:
         :rtype: bpy.types.Object
         :raise: Exception (RecursionError)
         """
-        return get_reference_object(obj, self._sep, recursive)
+        return get_reference_object(obj, self._separator, recursive)
 
     def _get_matrix(self, obj, space='world'):
         """
@@ -385,7 +386,7 @@ class Exporter:
         mesh = self._get_mesh(obj)
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
-            name = get_reference_keys(obj, self._sep)[1]  # vtx group name
+            name = get_reference_keys(obj, self._separator)[1]  # vtx group name
             logger.info('grp Ob(%s): [Ob(%s).Gr(%s): Me(%s)]',
                         obj.name, ref_obj.name, name, mesh.name)
             try:
@@ -393,7 +394,7 @@ class Exporter:
                 return [mesh.polygons[i] for i in vtx_group]
             except KeyError:
                 msg = "'{}{}{}' referred from '{}'".format(
-                    ref_obj.name, self._sep, name, obj.name)
+                    ref_obj.name, self._separator, name, obj.name)
                 raise KeyError(msg)
         if mesh:
             return mesh.polygons
@@ -657,7 +658,7 @@ class Exporter:
         :return:
         """
         logger.debug('Object("%s")', obj.name)
-        ref_keys = get_reference_keys(obj, self._sep)
+        ref_keys = get_reference_keys(obj, self._separator)
         if ref_keys and not ref_keys[1]:  # ref w/o vertex group
             ref_obj = self._get_reference_object(obj, recursive=False)  # process one obj at a time
             self._build_flavor(ref_obj, ignore_property)

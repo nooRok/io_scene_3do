@@ -213,6 +213,7 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                 objs = (context.selected_objects if all_ else
                         [context.active_object])
                 for obj in objs:  # type: bpy.types.Object
+                    kw['obj'] = obj
                     kw['scale'] = self.scale or int(obj.get('scale', 1))
                     origin = (obj.get('origin') or self.origin).lower()  # type: str  # 'world'|'object'
                     if origin == 'world':
@@ -227,7 +228,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                         _, ext = os.path.splitext(basename)
                         filename = '{}{}'.format(obj.name.split('.')[0], ext)
                         kw['filepath'] = os.path.join(dirname, filename)
-                        kw['obj'] = obj
                     logger.info(kw['filepath'])
                     export_3do.save(self, context, **kw)
                 logger.info('Finished')
