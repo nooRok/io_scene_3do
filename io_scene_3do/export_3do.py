@@ -623,20 +623,22 @@ class Exporter:
             elif type_ == 15:
                 values1 = obj.get('values1') or []
                 if values1:
+                    assert len(values1) == 7
                     if values1[-1] == 0:
                         pass
                     else:
                         idx = self._get_file_index('3do', get_filename(obj))
                         values1[-1] = ~idx
                 else:  # if not values1:  # or some_flag
-                    tr_vec = self._matrix * obj.matrix_world.translation * self._scale
+                    tr_vec = self._matrix.to_quaternion().to_matrix() * self._get_matrix(obj).translation * self._scale
                     loc = [int(v) for v in tr_vec]
                     eul = self._get_matrix(obj, self._f15_rot_space).to_euler()
                     eul.y *= -1  # y- front and y+ back in blender
                     deg = [degrees(e) for e in reversed(eul)]  # [float] -180...180
                     rot = [to_papy_degree(d) for d in deg]
-                    idx = self._get_file_index('3do', get_filename(obj))
-                    values1.extend(loc + rot + [~idx])
+                    f15_name = get_filename(obj)
+                    idx = self._get_file_index('3do', f15_name)
+                    values1.extend(loc + rot + [0 if f15_name == '*' else ~idx])
             elif type_ == 18:
                 values1 = obj['values1'][:]
                 values1[-1] = self._get_file_index('pmp', get_filename(obj))
