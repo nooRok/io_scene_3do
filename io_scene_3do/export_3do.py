@@ -51,7 +51,7 @@ def get_reference_keys(obj, separator):
     :return: (obj name, vertex group name)
     :rtype: list[str]
     """
-    ref_val = obj.get('ref') or obj.get('reference')  # type: str
+    ref_val = obj.get('ref', '').strip()  # type: str
     if ref_val:
         obj_name, *grp_name = ref_val.split(separator, 1)
         return [obj_name, ''.join(grp_name)]
@@ -101,10 +101,11 @@ def get_vertex_group_map(obj, mesh):
 
 def get_children(obj, key=None):
     """
-    Children are sorted by its names by default
 
     :param bpy.types.Object obj:
-    :param callable key: Function for sorting children
+    :param callable key:
+        Function for sorting children
+        (default=None: sorting by names)
     :return:
     :rtype: list[bpy.types.Object]
     """
@@ -277,7 +278,7 @@ def has_area(o, a, b, ndigits=None):
 class Exporter:
     def __init__(self, apply_modifiers, separator,
                  texture_flag, flip_uv, alt_color,
-                 matrix, f15_rot_space, *args, **kwargs):
+                 matrix, scale, f15_rot_space, *args, **kwargs):
         """
 
         :param bool apply_modifiers:
@@ -289,18 +290,20 @@ class Exporter:
             Alternate color index for F01|F02 with no color index or invalid color index
             (-2:random 0-255|-1:random 32-175|0-255)
         :param mathutils.Matrix matrix: Global matrix
+        :param int scale:
         :param str f15_rot_space: 'local'|'world'|'basis'|'parent'
         """
         self.model = Model()
         # mesh
         self._apply_modifiers = apply_modifiers
-        self._sep = separator
+        self._separator = separator
         # material
         self._tex_flag = texture_flag
         self._flip_uv = flip_uv
         self._alt_color = alt_color
         # matrix
         self._matrix = matrix.to_4x4()
+        self._scale = scale
         self._f15_rot_space = f15_rot_space
         # maps
         self._files = {'mip': {}, 'pmp': {}, '3do': {}}
@@ -316,7 +319,7 @@ class Exporter:
         :rtype: bpy.types.Object
         :raise: Exception (RecursionError)
         """
-        return get_reference_object(obj, self._sep, recursive)
+        return get_reference_object(obj, self._separator, recursive)
 
     def _get_matrix(self, obj, space='world'):
         """
@@ -326,11 +329,10 @@ class Exporter:
         :return:
         :rtype: mathutils.Matrix
         """
-        mx = getattr(obj, MX_SPACE[space]).copy()  # type: mathutils.Matrix
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
-            ref_mx = self._get_matrix(ref_obj, space)
-            mx.translation = (mx - ref_mx).to_translation()
+            return self._get_matrix(ref_obj, space)
+        mx = getattr(obj, MX_SPACE[space]).copy()  # type: mathutils.Matrix
         return mx
 
     def _get_file_index(self, key, filename):
@@ -342,7 +344,7 @@ class Exporter:
         :rtype: int
         """
         files = self._files[key]
-        return files.setdefault(filename, len(files))
+        return files.setdefault(filename.upper(), len(files))
 
     def _get_child_offsets(self, obj, order=None):
         """
@@ -369,7 +371,7 @@ class Exporter:
             if obj in self._meshes:
                 return self._meshes[obj]
             mesh = obj.to_mesh(bpy.context.scene, True, 'RENDER')
-            logger.info('mod Ob(%s): [Me(%s) -> Me(%s)]',
+            logger.debug('mod: Ob["%s"].Me["%s"] -> Me["%s"]',
                         obj.name, obj.data.name, mesh.name)
             return self._meshes.setdefault(obj, mesh)
         return obj.data
@@ -384,15 +386,15 @@ class Exporter:
         mesh = self._get_mesh(obj)
         ref_obj = self._get_reference_object(obj)
         if ref_obj:
-            name = get_reference_keys(obj, self._sep)[1]  # vtx group name
-            logger.info('grp Ob(%s): [Ob(%s).Gr(%s): Me(%s)]',
-                        obj.name, ref_obj.name, name, mesh.name)
+            name = get_reference_keys(obj, self._separator)[1]  # vtx group name
+            logger.debug('ref: Ob["%s"] -> Ob["%s"].Me["%s"].Gr["%s"]',
+                        obj.name, ref_obj.name, mesh.name, name)
             try:
                 vtx_group = get_vertex_group_map(ref_obj, mesh)[name]
                 return [mesh.polygons[i] for i in vtx_group]
             except KeyError:
                 msg = "'{}{}{}' referred from '{}'".format(
-                    ref_obj.name, self._sep, name, obj.name)
+                    ref_obj.name, self._separator, name, obj.name)
                 raise KeyError(msg)
         if mesh:
             return mesh.polygons
@@ -406,7 +408,14 @@ class Exporter:
         :return:
         :rtype: mathutils.Vector
         """
-        return self._matrix * (matrix or mathutils.Matrix()) * vertex
+        tr1, rot1, sc1 = matrix.decompose()  # type: mathutils.Vector, mathutils.Quaternion, mathutils.Vector
+        tr2, rot2, sc2 = self._matrix.decompose()  # type: mathutils.Vector, mathutils.Quaternion, mathutils.Vector
+        tr = mathutils.Matrix.Translation(tr1 - tr2)  # mathutils.Matrix.Translation(tr2 - tr1)
+        rot = (rot1 * rot2).to_matrix().to_4x4()
+        sc = mathutils.Matrix()
+        sc[0][0], sc[1][1], sc[2][2] = sc1
+        mx = rot * tr * sc
+        return mx * vertex * self._scale
 
     def _gen_bsp_values(self, obj):
         """
@@ -414,9 +423,12 @@ class Exporter:
         :param bpy.types.Object obj:
         """
         mesh = self._get_mesh(obj)
+        order = -1 if int(obj.get('bsp') or 0) < 0 else 1
+        if order == -1:
+            logger.debug('bsp inv: Ob["%s"]', obj)
         for f in self._get_faces(obj):
             vtc = [self._get_scaled_vertex(v, self._get_matrix(obj))
-                   for v in gen_face_vertices(mesh, f.index)]
+                   for v in gen_face_vertices(mesh, f.index)][::order]
             points = zip(vtc, vtc[1:], vtc[2:])  # [[0,1,2], [1,2,3]...]
             coords = next(pts for pts in points if has_area(*pts, ndigits=4))
             yield BspValues.from_coordinates(*coords)
@@ -510,7 +522,7 @@ class Exporter:
         mesh = self._get_mesh(obj)
         faces = self._get_faces(obj)
         if mesh and faces:  # face vertices define BSP normal
-            values1 = next(self._gen_bsp_values(obj))  # normal of faces[1]
+            values1 = next(self._gen_bsp_values(obj))  # normal of faces[0]
             if len(values2) == BSP_LENGTH[type_] - 1:  # draw itself
                 f_os = self._store_face_flavors(obj)
                 assert len(f_os) > 0
@@ -531,12 +543,12 @@ class Exporter:
         children = []
         if is_face_object(self._get_reference_object(obj) or obj):
             os_ = self._store_face_flavors(obj)
-            bsp = int(obj.get('bsp') or 0)
-            children.extend([] if bsp else os_)
-            if bsp:
-                for o, v1 in zip(os_, self._gen_bsp_values(obj)):
-                    bsp_o = self._store_flavor(5, v1, [o], obj)
-                    children.append(bsp_o)
+            if obj.get('bsp'):
+                bsp_os = [self._store_flavor(5, v1, [o], obj)
+                          for o, v1 in zip(os_, self._gen_bsp_values(obj))]
+                children.extend(bsp_os)
+            else:
+                children.extend(os_)
         if children or obj.children:
             children.extend(self._get_child_offsets(obj))  # order: [faces, object children]
             self._store_flavor(11, [len(children)], children, obj)
@@ -615,20 +627,22 @@ class Exporter:
             elif type_ == 15:
                 values1 = obj.get('values1') or []
                 if values1:
+                    assert len(values1) == 7
                     if values1[-1] == 0:
                         pass
                     else:
                         idx = self._get_file_index('3do', get_filename(obj))
                         values1[-1] = ~idx
                 else:  # if not values1:  # or some_flag
-                    tr_vec = self._matrix * obj.matrix_world.translation
+                    tr_vec = self._matrix.to_quaternion().to_matrix() * self._get_matrix(obj).translation * self._scale
                     loc = [int(v) for v in tr_vec]
                     eul = self._get_matrix(obj, self._f15_rot_space).to_euler()
                     eul.y *= -1  # y- front and y+ back in blender
                     deg = [degrees(e) for e in reversed(eul)]  # [float] -180...180
                     rot = [to_papy_degree(d) for d in deg]
-                    idx = self._get_file_index('3do', get_filename(obj))
-                    values1.extend(loc + rot + [~idx])
+                    f15_name = get_filename(obj)
+                    idx = self._get_file_index('3do', f15_name)
+                    values1.extend(loc + rot + [0 if f15_name == '*' else ~idx])
             elif type_ == 18:
                 values1 = obj['values1'][:]
                 values1[-1] = self._get_file_index('pmp', get_filename(obj))
@@ -647,7 +661,7 @@ class Exporter:
         :return:
         """
         logger.debug('Object("%s")', obj.name)
-        ref_keys = get_reference_keys(obj, self._sep)
+        ref_keys = get_reference_keys(obj, self._separator)
         if ref_keys and not ref_keys[1]:  # ref w/o vertex group
             ref_obj = self._get_reference_object(obj, recursive=False)  # process one obj at a time
             self._build_flavor(ref_obj, ignore_property)
@@ -658,10 +672,11 @@ class Exporter:
         for c_obj in get_children(obj):
             self._build_flavor(c_obj, ignore_property)
         type_ = obj.get('F')
+        assert type_ is None or isinstance(type_, int), obj
         if type_ is None or type_ == -1 or ignore_property:
             self._build_flavor_from_data(obj)
         else:
-            self._build_flavor_from_type(obj, int(type_))
+            self._build_flavor_from_type(obj, type_)
 
     def build_model(self, root_object):
         """
@@ -678,18 +693,18 @@ class Exporter:
                            if not f.parents and o != root_offset]
                 assert len(orphans) == 0, orphans
             for type_, files in self._files.items():
-                names = [n for n, _ in sorted(files.items(), key=lambda x: x[1])]
+                names = [n.upper() for n, _ in sorted(files.items(), key=lambda x: x[1])]
                 self.model.header.files.update({type_: names})
             self.model.sort(True)
             return True
         except Exception as err:
-            logger.exception('')
+            logger.exception(err)
             raise
         finally:
             logger.debug(self._offsets)
             logger.debug(self._meshes)
             for mesh in self._meshes.values():
-                logger.info('rem %s', mesh)
+                logger.info('rem: Me["%s"]', mesh)
                 bpy.data.meshes.remove(mesh)
             self._meshes.clear()
             _Cache.clear()
@@ -701,7 +716,7 @@ class Exporter:
 
 def save(operator, context, filepath, apply_modifiers, separator,
          default_texture_flag, flip_uv, alt_color,
-         matrix, f15_rot_space, obj=None, **kwargs):
+         matrix, scale, f15_rot_space, obj=None, **kwargs):
     """
 
     :param bpy.types.Operator operator:
@@ -713,13 +728,14 @@ def save(operator, context, filepath, apply_modifiers, separator,
     :param bool flip_uv:
     :param int alt_color: -2(random 0-255)|-1(random 32-175)|0-255
     :param mathutils.Matrix matrix: global matrix
+    :param int scale:
     :param str f15_rot_space: 'local'|'world'
     :param bpy.types.Object obj:
     :return:
     """
     exporter = Exporter(apply_modifiers, separator,
                         default_texture_flag, flip_uv, alt_color,
-                        matrix, f15_rot_space, **kwargs)
+                        matrix, scale, f15_rot_space, **kwargs)
     if exporter.build_model(obj or context.active_object):
         with open(filepath, 'wb') as f:
             f.write(exporter.model.to_bytes())

@@ -37,24 +37,35 @@ def build_ref_id(ref_name, *elements, separator=':', delimiter='.'):
     return separator.join([ref_name, grp_id])
 
 
-def register_texture(name, width=256, height=256):
+def register_image(name, width, height, type_='UV_GRID'):
     """
 
     :param str name:
     :param int width: width > 0
     :param int height: height > 0
+    :param str type_:
+    :return:
+    :rtype: bpy.types.Image
+    """
+    assert width and height, [width, height]
+    if name in bpy.data.images:
+        return bpy.data.images[name]
+    img = bpy.data.images.new(name=name, width=width, height=height)
+    img.generated_type = type_  # ; img.source = 'FILE'
+    return img
+
+
+def register_texture(name):
+    """
+
+    :param str name:
     :return:
     :rtype: bpy.types.ImageTexture
     """
     assert isinstance(name, str)
-    assert width and height, [width, height]
     if name in bpy.data.textures:
         return bpy.data.textures[name]
     tex = bpy.data.textures.new(name=name, type='IMAGE')
-    img = bpy.data.images.new(name=build_id(name, 'image'),
-                              width=width, height=height)
-    img.generated_type = 'UV_GRID'  # ; img.source = 'FILE'
-    tex.image = img
     tex.use_fake_user = True
     return tex
 
@@ -120,13 +131,12 @@ def get_material(material_id):
     """
     Find non-zero-filled -> zero-filled -> new non-zero-filled
 
-    :param material_id:
+    :param str material_id:
     :return:
     :rtype: bpy.types.Material
     """
-    mtl_id = str(material_id)
-    return (bpy.data.materials.get(mtl_id) or
-            bpy.data.materials[mtl_id.zfill(3)])
+    return (bpy.data.materials.get(material_id) or
+            bpy.data.materials[material_id.zfill(3)])
 
 
 def get_material_index(material, mesh, append=False):
@@ -145,17 +155,16 @@ def get_material_index(material, mesh, append=False):
     return mtl_idx
 
 
-def get_material_texture(material_id, index=0):
+def get_material_texture(material, index=0):
     """
 
-    :param str material_id:
+    :param bpy.types.Material material:
     :param int index:
     :return:
-    :rtype: bpy.types.Texture|bpy.types.ImageTexture
+    :rtype: bpy.types.ImageTexture
     """
-    mtl = get_material(material_id)
-    tex_slot = mtl.texture_slots[index]
-    return tex_slot.texture  # bpy.data.textures[mip_name]
+    tex_slot = material.texture_slots[index]
+    return tex_slot.texture
 
 
 def get_uv_map(mesh, name):
@@ -171,6 +180,19 @@ def get_uv_map(mesh, name):
     return uv_map
 
 
+def get_uv_loops(mesh, uv_map_name, face_index=0):
+    """
+
+    :param bpy.types.Mesh mesh:
+    :param str uv_map_name:
+    :param int face_index:
+    :return:
+    :rtype: list[bpy.types.MeshUVLoop]
+    """
+    idc = mesh.polygons[face_index].loop_indices
+    return [mesh.uv_layers[uv_map_name].data[i] for i in idc]
+
+
 def set_uv_coordinates(uv_loops, vertex_uvs, size):
     """
 
@@ -184,12 +206,22 @@ def set_uv_coordinates(uv_loops, vertex_uvs, size):
 
 
 class Importer:
-    def __init__(self, filepath, *args, **kwargs):
+    def __init__(self, filepath, merge_faces=False, obj_name='', separator=':', merge_uv_maps=False, lod_level=0b000):
+        """
+
+        :param str filepath:
+        :param bool merge_faces:
+        :param str obj_name:
+        :param str separator:
+        :param bool merge_uv_maps:
+        :param int lod_level:
+        """
         self.filepath = filepath
-        self._sep = ''
-        self._lod_lv = 0b000
-        self._merge_uv_maps = False
-        self._merged_obj_name = ''  # also used as flag "merge_faces"
+        self._merge_faces = merge_faces
+        self._obj_name = obj_name
+        self._separator = separator
+        self._merge_uv_maps = merge_uv_maps
+        self._lod_level = lod_level
         self._model = Model(filepath)
         self._objects = {}  # type: dict[int, bpy.types.Object]  # {flavor offset: blender obj}
         self._dummies = []  # type: list[bpy.types.Object]
@@ -208,6 +240,8 @@ class Importer:
         """
         f = self._flavors[offset]
         if isinstance(f, F15):  # 3do
+            if f.index == 0:
+                return '*'  # for dindycar.3do/droadcar.3do F16 children separator
             return self._model.header.files['3do'][~f.index]
         key = 'mip' if isinstance(f, F04) else 'pmp'
         return self._model.header.files[key][f.index]
@@ -279,27 +313,23 @@ class Importer:
             mip_name = self._tex_names.get(f.offset, NIL)
             mtl_name = build_id(f.color, mip_name)
             return get_material(mtl_name)
-        return get_material(f.color)
+        return get_material(str(f.color))
 
-    def _set_uv_coordinates(self, mesh, material, vertex_indices, vertex_uvs, face_index=0):
+    def _set_uv_map(self, mesh, material, face_index=0):
         """
 
         :param bpy.types.Mesh mesh:
         :param bpy.types.Material material:
-        :param list[int] vertex_indices:
-        :param list[list[int]] vertex_uvs:
         :param int face_index:
+        :return:
+        :rtype: bpy.types.MeshTexturePolyLayer
         """
-        tex_slot = material.texture_slots[0]
-        img = tex_slot.texture.image
+        img = get_material_texture(material).image
         img_name = 'texture' if self.merge_uv_maps else img.name
         uv_map = get_uv_map(mesh, build_id(img_name, 'uv'))
         uv_map.data[face_index].image = img
-        tex_slot.uv_layer = uv_map.name
-        uv_loops = [mesh.uv_layers[uv_map.name].data[i]
-                    for i in vertex_indices]
-        size = get_material_texture(material.name).image.size
-        set_uv_coordinates(uv_loops, vertex_uvs, size)
+        material.texture_slots[0].uv_layer = uv_map.name
+        return uv_map
 
     def _create_object_data(self, offset):
         """
@@ -340,11 +370,11 @@ class Importer:
             group.objects.link(obj)
             self._dummies.append(obj)
         elif isinstance(f, FaceFlavor):  # 01, 02
-            if self._merged_obj_name:
+            if self._merge_faces:
                 obj = create_object(f_id, None, par_obj)
                 ref_name = build_ref_id(
-                    self._merged_obj_name, f.offset, 'F{:02}'.format(f.type),
-                    separator=self._sep)
+                    self._obj_name, f.offset, 'F{:02}'.format(f.type),
+                    separator=self._separator)
                 set_properties(obj, ref=ref_name,
                                **self._get_flavor_properties(offset))
             else:
@@ -354,7 +384,10 @@ class Importer:
                 obj = create_object(f_id, mesh, par_obj)
                 mtl = self._get_face_material(offset)
                 if isinstance(f, F02):
-                    self._set_uv_coordinates(mesh, mtl, idc, uvs)
+                    uv_map = self._set_uv_map(mesh, mtl)
+                    uv_loops = get_uv_loops(mesh, uv_map.name)
+                    img = get_material_texture(mtl).image
+                    set_uv_coordinates(uv_loops, uvs, img.size)
                 obj.active_material = mtl
                 set_properties(obj, **self._get_flavor_properties(offset))
             self._objects[f.offset] = obj
@@ -369,11 +402,11 @@ class Importer:
                 if offset in self._lod_mgrs:
                     obj['F17'] = self._lod_mgrs[offset]
                     lod_offsets = []
-                    if self._lod_lv & 1 << 2:  # HI
+                    if self._lod_level & 1 << 2:  # HI
                         lod_offsets.extend(f.children[:4])
-                    if self._lod_lv & 1 << 1:  # MID
+                    if self._lod_level & 1 << 1:  # MID
                         lod_offsets.extend(f.children[4:6])
-                    if self._lod_lv & 1 << 0:  # LO
+                    if self._lod_level & 1 << 0:  # LO
                         lod_offsets.extend(f.children[6:])
                     for lod_o in lod_offsets:
                         self._read_flavor(lod_o, offset)
@@ -418,9 +451,9 @@ class Importer:
             vtc.extend(coords)
             vtx_idc.append(idc)
             vtx_uvs.append(uvs)
-        mesh = bpy.data.meshes.new(build_id(self._merged_obj_name, 'mesh'))
+        mesh = bpy.data.meshes.new(build_id(self._obj_name, 'mesh'))
         mesh.from_pydata(vtc, [], vtx_idc)
-        obj = bpy.data.objects.new(self._merged_obj_name, mesh)
+        obj = bpy.data.objects.new(self._obj_name, mesh)
         # Need a merged object creation before doing the following processes.
         for o, idc in zip(offsets, vtx_idc):
             name = self._build_flavor_id(o)
@@ -428,7 +461,10 @@ class Importer:
         for o, idc, uvs, poly in zip(offsets, vtx_idc, vtx_uvs, mesh.polygons):
             mtl = self._get_face_material(o)
             if isinstance(self._flavors[o], F02):
-                self._set_uv_coordinates(mesh, mtl, idc, uvs, poly.index)
+                uv_map = self._set_uv_map(mesh, mtl, poly.index)
+                uv_loops = get_uv_loops(mesh, uv_map.name, poly.index)
+                img = get_material_texture(mtl).image
+                set_uv_coordinates(uv_loops, uvs, img.size)
             poly.material_index = get_material_index(mtl, mesh, True)
         return obj
 
@@ -455,7 +491,9 @@ class Importer:
         if set(self._flavors.by_types(2)) - set(self._tex_names):  # __NIL__
             names.append(NIL)
         for name in names:
-            register_texture(name, w, h)
+            img = register_image(name, w, h)
+            tex = register_texture(name)
+            tex.image = img
 
     def register_materials(self):
         for _, f in sorted(self._flavors.by_types(1, 2).items()):  # type: int, FaceFlavor
@@ -467,18 +505,7 @@ class Importer:
                 assert isinstance(f, F01)
                 register_material(str(f.color))
 
-    def read_flavors(self, merge_uv_maps, merged_obj_name='', separator=':', lod_level=0b000):
-        """
-
-        :param bool merge_uv_maps:
-        :param str merged_obj_name:
-        :param str separator:
-        :param int lod_level: bit field
-        """
-        self._merge_uv_maps = merge_uv_maps
-        self._merged_obj_name = merged_obj_name
-        self._sep = separator
-        self._lod_lv = lod_level
+    def read_flavors(self):
         self._read_flavor(self._model.header.root_offset)
 
     def link_objects(self, context, scale=0):
@@ -501,7 +528,7 @@ class Importer:
         for obj in (list(self._objects.values()) + self._dummies):
             context.scene.objects.link(obj)
             grp.objects.link(obj)
-        if self._merged_obj_name:
+        if self._merge_faces:
             mrg_obj = self._create_merged_object()
             mrg_obj['ref_source'] = True
             mrg_obj.scale = scale_vec
@@ -516,8 +543,8 @@ class Importer:
         return self._model.body.flavors
 
 
-def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
-             merge_faces, merge_uv_maps, merged_obj_name, separator, **_):
+def load(operator, context, filepath, lod_level, scale, tex_w, tex_h,
+         merge_faces, merge_uv_maps, merged_obj_name, separator, **_):
     """
 
     :param bpy.types.Operator operator:
@@ -533,14 +560,16 @@ def load_3do(operator, context, filepath, lod_level, scale, tex_w, tex_h,
     :param str separator:
     :return:
     """
-    importer = Importer(filepath)
+    importer = Importer(filepath,
+                        merge_faces,
+                        merged_obj_name,
+                        separator,
+                        merge_uv_maps,
+                        lod_level)
     importer.read_model()
     importer.register_textures(tex_w, tex_h)
     importer.register_materials()
-    importer.read_flavors(merge_uv_maps,
-                          merged_obj_name if merge_faces else '',
-                          separator,
-                          lod_level)
+    importer.read_flavors()
     importer.link_objects(context, scale)
     operator.report({'INFO'}, 'Model imported ({})'.format(filepath))
     return {'FINISHED'}

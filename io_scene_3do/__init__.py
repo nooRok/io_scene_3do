@@ -33,26 +33,26 @@ if 'blender modules':
     from . import (export_3do,
                    import_3do)
 
-import os
-from logging import (getLogger,
-                     Formatter,
-                     StreamHandler,
-                     DEBUG,
-                     FileHandler)
+    OrientationHelper = orientation_helper_factory('OrientationHelper')
 
-logger = getLogger(__name__)
-logger.setLevel(DEBUG)
-st_hdlr = StreamHandler()
+if 'python modules':
+    import os
+    from logging import (getLogger,
+                         Formatter,
+                         StreamHandler,
+                         DEBUG,
+                         FileHandler)
 
-OrientationHelper = orientation_helper_factory('OrientationHelper')
-
-log_lvs = [('50', 'CRITICAL', ''),
-           ('40', 'ERROR', ''),
-           ('30', 'WARNING', ''),
-           ('20', 'INFO', ''),
-           ('10', 'DEBUG', ''),
-           ('0', 'NOTSET', ''),
-           ('-1', 'DISABLE', '')]
+    logger = getLogger(__name__)
+    logger.setLevel(DEBUG)
+    st_hdlr = StreamHandler()
+    log_lvs = [('50', 'CRITICAL', ''),
+               ('40', 'ERROR', ''),
+               ('30', 'WARNING', ''),
+               ('20', 'INFO', ''),
+               ('10', 'DEBUG', ''),
+               ('0', 'NOTSET', ''),
+               ('-1', 'DISABLE', '')]
 
 
 # importer/exporter
@@ -79,29 +79,30 @@ class Import3DO(bpy.types.Operator, ImportHelper):
                         description='Default texture height')
     # merge
     merge_faces = BoolProperty(name='Merge Faces', default=True)
-    merge_uv_maps = BoolProperty(name='Merge UV Maps', default=False)
     merged_obj_name = StringProperty(name='Name', default='',
                                      description="Not allowed to use a character that used for separator.")
     separator = StringProperty(name='Separator', default=':',
                                description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
+    merge_uv_maps = BoolProperty(name='Merge UV Maps', default=False)
 
     def execute(self, context):
         kw = self.as_keywords()
         kw['lod_level'] = (self.lod_hi << 2 | self.lod_mid << 1 | self.lod_lo)
         kw['merged_obj_name'] = (kw['merged_obj_name'] or
                                  os.path.basename(self.filepath))
+        logger.info(kw)
         if kw['separator'] in kw['merged_obj_name']:
-            self.report({'ERROR'}, "Not allowed to use a character that used for separator..")
+            self.report({'ERROR'}, "Not allowed to use a character that used for a separator.")
             return {'CANCELLED'}
-        return import_3do.load_3do(self, context, **kw)
+        return import_3do.load(self, context, **kw)
 
     def draw(self, context):
         layout = self.layout
         layout.prop(self, 'scale')
-        box_mip_size = layout.box()
-        box_mip_size.label('Default .mip size:')
-        box_mip_size.prop(self, 'tex_w')
-        box_mip_size.prop(self, 'tex_h')
+        box_mip = layout.box()
+        box_mip.label('Default .mip size:')
+        box_mip.prop(self, 'tex_w')
+        box_mip.prop(self, 'tex_h')
         box_trk_lod = layout.box()
         box_trk_lod.label('Track details:')
         box_trk_lod_row = box_trk_lod.row()
@@ -111,8 +112,10 @@ class Import3DO(bpy.types.Operator, ImportHelper):
         box_mrg = layout.box()
         box_mrg.label('Merge options:')
         box_mrg.prop(self, 'merge_faces')
-        box_mrg.prop(self, 'merged_obj_name')
-        box_mrg.prop(self, 'separator')
+        box_mrg_obj = box_mrg.box()
+        box_mrg_obj.prop(self, 'merged_obj_name')
+        box_mrg_obj.prop(self, 'separator')
+        box_mrg_obj.enabled = self.merge_faces
         box_mrg.prop(self, 'merge_uv_maps')
 
 
@@ -127,6 +130,10 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                         description='3do model scale (1*n) '
                                     '0=use object property "scale"',
                         default=0)
+    origin = EnumProperty(items=[('world', 'World', ''),
+                                 ('object', 'Object', '')],
+                          name='Matrix origin',
+                          default='world')
     # color, texture
     alt_color = IntProperty(name='Alt color',
                             description=('Color for face with no material '
@@ -154,7 +161,8 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
     apply_modifiers = BoolProperty(name='Apply Object Modifiers',
                                    default=True)
     separator = StringProperty(name='Separator', default=':',
-                               description='A character for to separate a value of object property "ref"/"reference" to reference object name and its vertex group name.')
+                               description='A character for to separate a value of object property "ref" '
+                                           'to the referenced object name and its vertex group name.')
     # ex obj
     f15_rot_space = EnumProperty(items=[('basis', 'Basis', 'Local Space'),
                                         ('parent', 'Parent', 'Local Space'),
@@ -165,16 +173,16 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                                  default='basis')
     #
     export_all = BoolProperty(name='Export All Selected Objects',
-                              description='Object name is used as filename. '
+                              description='Filenames are taken from each selected object names. '
                                           'Input box value is ignored.',
                               default=False)
     # logging
     c_log_lv_ = EnumProperty(items=log_lvs[:-1],
                              name='Console logging level',
                              description='Logging threshold level for console',
-                             default='30',
+                             default='20',
                              update=lambda s, c: setattr(s, 'c_log_lv', int(s.c_log_lv_)))
-    c_log_lv = IntProperty(default=30, options={'HIDDEN'})
+    c_log_lv = IntProperty(default=20, options={'HIDDEN'})
     f_log_lv_ = EnumProperty(items=log_lvs,
                              name='File logging level',
                              description='Logging threshold level for logfile',
@@ -182,6 +190,66 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
                              update=lambda s, c: setattr(
                                  s, 'f_log_lv', int(s.f_log_lv_)))
     f_log_lv = IntProperty(default=-1, options={'HIDDEN'})
+
+    def execute(self, context):
+        with self:
+            try:
+                kw = self.as_keywords()
+                kw['default_texture_flag'] = kw.pop('tex_flag')
+                rot_mx = axis_conversion(to_forward=self.axis_forward,
+                                         to_up=self.axis_up).to_4x4()
+                all_ = self.export_all and len(context.selected_objects) > 1
+                objs = (context.selected_objects if all_ else
+                        [context.active_object])
+                for obj in objs:  # type: bpy.types.Object
+                    kw['obj'] = obj
+                    kw['scale'] = self.scale or int(obj.get('scale', 1))
+                    origin = (obj.get('origin') or self.origin).lower()  # type: str  # 'world'|'object'
+                    if origin == 'world':
+                        kw['matrix'] = rot_mx  # mathutils.Matrix()
+                    else:  # object
+                        assert self.origin == 'object'
+                        obj_mx = context.active_object.matrix_world  # type: mathutils.Matrix
+                        tr, rot, sc = obj_mx.decompose()  # type: mathutils.Vector, mathutils.Quaternion, mathutils.Vector
+                        kw['matrix'] = mathutils.Matrix.Translation(tr) * rot_mx
+                    if all_:
+                        dirname, basename = os.path.split(self.filepath)
+                        _, ext = os.path.splitext(basename)
+                        filename = '{}{}'.format(obj.name.split('.')[0], ext)
+                        kw['filepath'] = os.path.join(dirname, filename)
+                    logger.info(kw)
+                    export_3do.save(self, context, **kw)
+                logger.info('Finished')
+                self.report({'INFO'}, 'Finished: ({})'.format(self.filepath))
+                return {'FINISHED'}
+            except Exception as err:
+                logger.exception(err)
+                logger.info('Failed')
+                self.report({'ERROR'}, 'Cancelled: ({})'.format(str(err)))
+                return {'CANCELLED'}
+
+    def draw(self, context):
+        layout = self.layout
+        box_mx = layout.box()
+        box_mx.label('Matrix:')
+        box_mx.prop(self, 'scale')
+        box_mx.prop(self, 'axis_forward')
+        box_mx.prop(self, 'axis_up')
+        box_mx.prop(self, 'origin')
+        box_mx.prop(self, 'f15_rot_space')
+        box_mtl = layout.box()
+        box_mtl.label('Material:')
+        box_mtl.prop(self, 'alt_color')
+        box_mtl.prop(self, 'tex_flag_')
+        box_mtl.prop(self, 'flip_uv')
+        box = layout.box()
+        box.prop(self, 'separator')
+        box.prop(self, 'apply_modifiers')
+        if len(context.selected_objects) > 1:
+            box.prop(self, 'export_all')
+        box_log = layout.box()
+        box_log.prop(self, 'c_log_lv_')
+        box_log.prop(self, 'f_log_lv_')
 
     def __enter__(self):
         st_hdlr.setLevel(self.c_log_lv)
@@ -198,59 +266,6 @@ class Export3DO(bpy.types.Operator, ExportHelper, OrientationHelper):
             h.close()
             logger.removeHandler(h)
 
-    def execute(self, context):
-        with self:
-            try:
-                kw = self.as_keywords()
-                kw['default_texture_flag'] = kw.pop('tex_flag')
-                rot_mx = axis_conversion(to_forward=self.axis_forward,
-                                         to_up=self.axis_up).to_4x4()
-                all_ = self.export_all and len(context.selected_objects) > 1
-                objs = (context.selected_objects if all_ else
-                        [context.active_object])
-                for obj in objs:  # type: bpy.types.Object
-                    if all_:
-                        dirname, basename = os.path.split(self.filepath)
-                        _, ext = os.path.splitext(basename)
-                        filename = '{}{}'.format(obj.name.split('.')[0], ext)
-                        kw['filepath'] = os.path.join(dirname, filename)
-                        kw['obj'] = obj
-                    scl_mx = mathutils.Matrix.Scale(self.scale or obj.get('scale', 1), 4)
-                    kw['matrix'] = scl_mx * rot_mx
-                    logger.info(kw['filepath'])
-                    export_3do.save(self, context, **kw)
-                logger.info('Finished')
-                self.report({'INFO'}, 'Finished: ({})'.format(self.filepath))
-                return {'FINISHED'}
-            except Exception as err:
-                logger.exception(err)
-                logger.info('Failed')
-                self.report({'ERROR'}, 'Cancelled: ({})'.format(str(err)))
-                return {'CANCELLED'}
-
-    def draw(self, context):
-        layout = self.layout
-        box_mx = layout.box()
-        box_mx.label('Global Matrix:')
-        box_mx.prop(self, 'scale')
-        box_mx.prop(self, 'axis_forward')
-        box_mx.prop(self, 'axis_up')
-        box_mtl = layout.box()
-        box_mtl.prop(self, 'alt_color')
-        box_mtl.prop(self, 'tex_flag_')
-        box_mtl.prop(self, 'flip_uv')
-        box = layout.box()
-        box.prop(self, 'apply_modifiers')
-        if len(context.selected_objects) > 1:
-            box.prop(self, 'export_all')
-        box.prop(self, 'separator')
-        box_f15_mx = layout.box()
-        box_f15_mx.label('F15 Matrix:')
-        box_f15_mx.prop(self, 'f15_rot_space')
-        box_log = layout.box()
-        box_log.prop(self, 'c_log_lv_')
-        box_log.prop(self, 'f_log_lv_')
-
 
 # handler
 def import_3do_menu_handler(self, context):
@@ -264,7 +279,8 @@ def export_3do_menu_handler(self, context):
 
 
 def register():
-    bpy.utils.register_module(__name__)
+    bpy.utils.register_class(Import3DO)
+    bpy.utils.register_class(Export3DO)
     bpy.types.INFO_MT_file_import.append(import_3do_menu_handler)
     bpy.types.INFO_MT_file_export.append(export_3do_menu_handler)
     logger.addHandler(st_hdlr)
@@ -272,8 +288,9 @@ def register():
 
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
     bpy.types.INFO_MT_file_import.remove(import_3do_menu_handler)
     bpy.types.INFO_MT_file_export.remove(export_3do_menu_handler)
+    bpy.utils.unregister_class(Import3DO)
+    bpy.utils.unregister_class(Export3DO)
     logger.removeHandler(st_hdlr)
     print(__name__, 'unregistered')
